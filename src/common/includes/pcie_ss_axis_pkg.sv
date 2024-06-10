@@ -78,4 +78,22 @@ typedef struct packed {
 localparam T_PCIE_TAG_WIDTH = $bits(t_pcie_tag_mode);
 
 
+// Configuration extension bus (CEB) request
+typedef struct packed {
+   logic [9:0]  dw_addr;
+   logic [4:0]  slot_num;
+   logic [2:0]  pf_num;
+   logic [10:0] vf_num;
+   logic        vf_active;
+   logic [31:0] wr_data;
+   logic [3:0]  wr_tkeep;   // Write byte mask. Request is a read when all 0.
+} t_pcie_ceb_req;
+localparam T_PCIE_CEB_REQ_WIDTH = $bits(t_pcie_ceb_req);
+
+// Configuration extension bus (CEB) response
+typedef struct packed {
+   logic [31:0] rd_data;
+} t_pcie_ceb_rsp;
+localparam T_PCIE_CEB_RSP_WIDTH = $bits(t_pcie_ceb_rsp);
+
 endpackage: pcie_ss_axis_pkg

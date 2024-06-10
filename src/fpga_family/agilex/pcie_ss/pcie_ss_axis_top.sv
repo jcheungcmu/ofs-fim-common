@@ -150,6 +150,15 @@ import ofs_fim_pcie_pkg::*;
 `SET_CFG_PARAM_VEC(MSIX_VF_PBA_OFFSET_VEC, int, 8);
 `SET_CFG_PARAM_VEC(MSIX_VF_PBA_BAR_VEC, int, 8);
 
+`SET_CFG_PARAM(ATS_CAP);
+`SET_CFG_PARAM(PASID_CAP);
+`SET_CFG_PARAM(PRS_CAP);
+`SET_CFG_PARAM_VEC(PASID_CAP_VEC, bit, CFG_NUM_PFS);
+
+`SET_CFG_PARAM(HAS_CEB);
+`SET_CFG_PARAM(CEB_PF_EXT_NEXT_DW);
+`SET_CFG_PARAM(CEB_VF_EXT_NEXT_DW);
+
 `undef MACRO_TO_PARAM
 `undef SET_CFG_PARAM
 
@@ -258,6 +267,9 @@ logic [PCIE_NUM_LINKS-1:0] [19:0]        app_ss_st_flrcmpl_tdata;
 logic [PCIE_NUM_LINKS-1:0]               ss_app_st_cplto_tvalid;
 logic [PCIE_NUM_LINKS-1:0] [29:0]        ss_app_st_cplto_tdata;
 
+logic [PCIE_NUM_LINKS-1:0]               ctrlshadow_tvalid;
+logic [PCIE_NUM_LINKS-1:0][39:0]         ctrlshadow_tdata;
+
 logic [PCIE_NUM_LINKS-1:0]               ss_app_lite_csr_awready;
 logic [PCIE_NUM_LINKS-1:0]               ss_app_lite_csr_wready;
 logic [PCIE_NUM_LINKS-1:0]               ss_app_lite_csr_arready;
@@ -338,8 +350,8 @@ for (genvar j=0; j<PCIE_NUM_LINKS; j++) begin : PCIE_LINK_CONN
 
            .csr_clk,
            .csr_rst_n(csr_rst_n[j]),
-           .ctrlshadow_tvalid(ss_app_st_ctrlshadow_tvalid[j]),
-           .ctrlshadow_tdata(ss_app_st_ctrlshadow_tdata[j]),
+           .ctrlshadow_tvalid(ctrlshadow_tvalid[j]),
+           .ctrlshadow_tdata(ctrlshadow_tdata[j]),
 
            .flr_req_if(flr_rsp_if[j]),
            .flr_rsp_if(msix_flr_rsp_if),
@@ -491,17 +503,68 @@ for (genvar j=0; j<PCIE_NUM_LINKS; j++) begin : PCIE_LINK_CONN
     assign ss_csr_lite_if[j].rresp       = ss_app_lite_csr_rresp[j];
 
 
-    // Placeholder configuration extension bus. Always return 0 for reads.
-    assign app_ss_st_cebreq_tready[j] = 1'b1;
-    always_ff @(posedge csr_clk) begin
-        app_ss_st_cebresp_tvalid[j] <= ss_app_st_cebreq_tvalid[j] &&
-                                       (ss_app_st_cebreq_tdata[j][67:62] == 4'h0);
+    // Configuration extension bus
+    pcie_ss_axis_pkg::t_pcie_ceb_req ceb_req;
+    always_comb begin
+        ceb_req.dw_addr   = ss_app_st_cebreq_tdata[j][9:0];
+        ceb_req.slot_num  = ss_app_st_cebreq_tdata[j][14:10];
+        ceb_req.pf_num    = ss_app_st_cebreq_tdata[j][17:15];
+        ceb_req.vf_num    = ss_app_st_cebreq_tdata[j][28:18];
+        ceb_req.vf_active = ss_app_st_cebreq_tdata[j][29];
+        ceb_req.wr_data   = ss_app_st_cebreq_tdata[j][61:30];
+        ceb_req.wr_tkeep  = ss_app_st_cebreq_tdata[j][65:62];
+    end
 
-        if (~csr_rst_n[j]) begin
-            app_ss_st_cebresp_tvalid[j] <= 1'b0;
+    pcie_ss_axis_pkg::t_pcie_ceb_rsp ceb_rsp;
+    assign app_ss_st_cebresp_tdata[j] = ceb_rsp.rd_data;
+
+    if (CFG_HAS_CEB && CFG_ATS_CAP && CFG_PASID_CAP && !CFG_PRS_CAP) begin : ceb
+        // Configuration extension bus enabled, ATS capability is enabled,
+        // and PRS capability is not enabled. Assume this is because the HIP's
+        // implementation of PRS is flawed: the PASID required bit isn't
+        // set and outstanding request capacity is zero. Use a FIM-provided
+        // version of the page request capabililty.
+        ofs_fim_pcie_ss_ceb_pri
+          #(
+            .PRI_CAP_DW_ADDR(CFG_CEB_PF_EXT_NEXT_DW),
+            .NUM_PFS(CFG_NUM_PFS),
+            // Add a PRI capability to every PF that supports PASID. The PRI
+            // capability is never added to VFs. A PF's PRI capability applies
+            // to its VFs.
+            .PF_ENABLE_PRI(CFG_PASID_CAP_VEC)
+            )
+          ceb_pri
+           (
+            .csr_clk,
+            .csr_rst_n(csr_rst_n[j]),
+            .ceb_req_tvalid(ss_app_st_cebreq_tvalid[j]),
+            .ceb_req_tready(app_ss_st_cebreq_tready[j]),
+            .ceb_req(ceb_req),
+            .ceb_rsp_tvalid(app_ss_st_cebresp_tvalid[j]),
+            .ceb_rsp(ceb_rsp),
+
+            .ctrlshadow_tvalid_in(ctrlshadow_tvalid[j]),
+            .ctrlshadow_tdata_in(ctrlshadow_tdata[j]),
+            .ctrlshadow_tvalid_out(ss_app_st_ctrlshadow_tvalid[j]),
+            .ctrlshadow_tdata_out(ss_app_st_ctrlshadow_tdata[j])
+            );
+    end
+    else begin : no_ceb
+        // CEB may be enabled, but is not exposed to the FIM. Tie it off,
+        // always returning 0.
+        assign app_ss_st_cebreq_tready[j] = 1'b1;
+        assign ceb_rsp = '0;
+
+        assign ss_app_st_ctrlshadow_tvalid[j] = ctrlshadow_tvalid[j];
+        assign ss_app_st_ctrlshadow_tdata[j] = ctrlshadow_tdata[j];
+
+        always_ff @(posedge csr_clk) begin
+            app_ss_st_cebresp_tvalid[j] <= ss_app_st_cebreq_tvalid[j] && ~|ceb_req.wr_tkeep;
+
+            if (~csr_rst_n[j])
+                app_ss_st_cebresp_tvalid[j] <= 1'b0;
         end
     end
-    assign app_ss_st_cebresp_tdata[j] = '0;
 
 
     //-------------------------------------
@@ -600,8 +663,8 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .p0_ss_app_st_flrcmpl_tready    (ss_app_st_flrcmpl_tready[0]    ), \
    `endif                                                              \
     .p0_app_ss_st_flrcmpl_tdata     (app_ss_st_flrcmpl_tdata[0]     ), \
-    .p0_ss_app_st_ctrlshadow_tvalid (ss_app_st_ctrlshadow_tvalid[0] ), \
-    .p0_ss_app_st_ctrlshadow_tdata  (ss_app_st_ctrlshadow_tdata[0]  ), \
+    .p0_ss_app_st_ctrlshadow_tvalid (ctrlshadow_tvalid[0]           ), \
+    .p0_ss_app_st_ctrlshadow_tdata  (ctrlshadow_tdata[0]            ), \
     .p0_ss_app_st_txcrdt_tvalid     (                               ), \
     .p0_ss_app_st_txcrdt_tdata      (                               ), \
     .p0_ss_app_st_cplto_tvalid      (ss_app_st_cplto_tvalid[0]      ), \
@@ -691,8 +754,8 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .p1_ss_app_st_flrcmpl_tready    (ss_app_st_flrcmpl_tready[1]    ), \
    `endif                                                              \
     .p1_app_ss_st_flrcmpl_tdata     (app_ss_st_flrcmpl_tdata[1]     ), \
-    .p1_ss_app_st_ctrlshadow_tvalid (ss_app_st_ctrlshadow_tvalid[1] ), \
-    .p1_ss_app_st_ctrlshadow_tdata  (ss_app_st_ctrlshadow_tdata[1]  ), \
+    .p1_ss_app_st_ctrlshadow_tvalid (ctrlshadow_tvalid[1]           ), \
+    .p1_ss_app_st_ctrlshadow_tdata  (ctrlshadow_tdata[1]            ), \
     .p1_ss_app_st_txcrdt_tvalid     (                               ), \
     .p1_ss_app_st_txcrdt_tdata      (                               ), \
     .p1_ss_app_st_cplto_tvalid      (ss_app_st_cplto_tvalid[1]      ), \
