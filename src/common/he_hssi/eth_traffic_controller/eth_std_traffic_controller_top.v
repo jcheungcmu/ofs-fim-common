@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 module eth_std_traffic_controller_top #(
+   parameter CHANNEL_NUM   = 0,
    parameter DEVICE_FAMILY = "Arria 10",
    parameter CRC_EN        = 1
 ) (
@@ -110,6 +111,7 @@ avalon_st_gen # (
 );
 
 avalon_st_mon  # (
+   .CHANNEL_NUM (CHANNEL_NUM),
    .CRC_EN (CRC_EN)
 ) MON (
    .clk                      (clk ),                       // RX clock

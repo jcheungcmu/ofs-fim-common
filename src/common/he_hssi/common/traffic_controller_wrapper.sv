@@ -14,7 +14,9 @@ import ofs_fim_eth_avst_if_pkg::*;
 `include "fpga_defines.vh"
 `include  "ofs_ip_cfg_db.vh"
 
-module traffic_controller_wrapper (
+module traffic_controller_wrapper #(
+   parameter CHANNEL_NUM = 0
+)(
    input logic      csr_clk,
    input logic      csr_rst_n,
    input logic      tx_rst_n,
@@ -167,6 +169,7 @@ fim_resync #(
 // generator and checker and also loopback
 `ifndef ETH_100G
 eth_std_traffic_controller_top #(
+   .CHANNEL_NUM   (CHANNEL_NUM),
 `ifdef DISABLE_HE_HSSI_CRC
    .CRC_EN        (0),
 `endif

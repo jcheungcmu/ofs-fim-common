@@ -10,6 +10,7 @@
 // altera message_off 10034 10035 10036 10037 10230
 
 module avalon_st_mon #(
+    parameter CHANNEL_NUM   = 0,
     parameter CRC_EN        = 1
 ) ( 
    input clk                             ,
@@ -294,8 +295,8 @@ endgenerate
 
 // __________________________________________________________
 //synopsys translate_off
-always@(good_pkts)    begin $display("_INFO_: Received Packet %d", good_pkts); end
-always@(bad_pkts) begin $display("_ERROR_: CRC Error Found %d", bad_pkts); end
+always@(good_pkts)    begin $display("_INFO_: Received Packet (chan %0d) %d", CHANNEL_NUM, good_pkts); end
+always@(bad_pkts) begin $display("_ERROR_: CRC Error Found (chan %0d) %d", CHANNEL_NUM, bad_pkts); end
 //synopsys translate_on
 // __________________________________________________________
 

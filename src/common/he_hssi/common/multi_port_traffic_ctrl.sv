@@ -54,7 +54,9 @@ generate
       logic [1:0] o_avalon_st_pause_data;
       logic [7:0] o_avalon_st_pfc_pause_data;
 
-      traffic_controller_wrapper traffic_controller_wrapper (
+      traffic_controller_wrapper #(
+         .CHANNEL_NUM(nume)
+      ) traffic_controller_wrapper (
          //clock
          .csr_clk                    (clk),
          .tx_clk_156                 (eth_tx_st[nume].clk),
