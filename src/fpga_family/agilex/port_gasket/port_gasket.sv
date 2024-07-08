@@ -144,7 +144,7 @@ endgenerate
 `define GET_FUNC_VF_RST_N(LINK, PF, VF, VF_ACTIVE) ((VF_ACTIVE != 0) ? vf_flr_rst_n[LINK][PF][VF] : 1'b1)
 
 reg [PG_NUM_PORTS-1:0] port_rst_in_n[PG_NUM_LINKS-1:0] = '{PG_NUM_LINKS{1'b0}};
-reg [PG_NUM_PORTS-1:0] port_rst_n[PG_NUM_LINKS-1:0] = '{PG_NUM_LINKS{1'b0}};
+reg [PG_NUM_PORTS-1:0] port_rst_n[PG_NUM_LINKS-1:0];
 
 // ----------------------------------------------------------------------------------------------------
 //  PCIe port_rst_n generation
