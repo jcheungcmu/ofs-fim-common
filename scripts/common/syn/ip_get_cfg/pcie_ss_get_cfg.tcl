@@ -71,10 +71,22 @@ proc emit_ip_cfg {ofile_name ip_name} {
             set top_topology [string toupper [get_instance_parameter_value $inst $p]]
             regsub -all { +} $top_topology {_} top_topology
 
+            # Extract the PCIe generation number from top topology (GenA_LXW)
+            if { [regsub -all {.*_+GEN([0-9]+)_.*} $top_topology {\1} topology_pcie_gen] == 0 } {
+                # Pattern match failed. Assume 4.
+                set topology_pcie_gen 4
+            }
+
             # Extract the number of links from top topology (GenA_LXW)
             if { [regsub -all {.*_+([0-9]+)X.*} $top_topology {\1} topology_num_links] == 0 } {
                 # Pattern match failed. Assume 1.
                 set topology_num_links 1
+            }
+
+            # Extract the link width from top topology (GenA_LXW)
+            if { [regsub -all {.*X([0-9]+)$} $top_topology {\1} topology_link_width] == 0 } {
+                # Pattern match failed. Assume 16.
+                set topology_link_width 16
             }
         }
 
@@ -122,6 +134,10 @@ proc emit_ip_cfg {ofile_name ip_name} {
 
     puts $of "// PCIe SS Topology"
     puts $of "`define OFS_FIM_IP_CFG_${ip_name}_${top_topology} 1"
+    puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PCIE_GEN ${topology_pcie_gen}"
+    puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PCIE_GEN_IS_${topology_pcie_gen} 1"
+    puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PCIE_LINK_WIDTH ${topology_link_width}"
+    puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PCIE_LINK_WIDTH_IS_${topology_link_width} 1"
     puts $of "// Number of links active inside the PCIe SS"
     puts $of "`define OFS_FIM_IP_CFG_${ip_name}_NUM_PHYS_LINKS ${topology_num_links}"
     puts $of "`define OFS_FIM_IP_CFG_${ip_name}_NUM_PHYS_LINKS_IS_${topology_num_links} 1"

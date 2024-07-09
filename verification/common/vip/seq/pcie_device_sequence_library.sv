@@ -63,7 +63,7 @@ class pcie_device_bring_up_link_sequence extends `PCIE_DEV_VIR_BASE_SEQ;
      // Valid for Gen2 and higher speeds
      // Suppress RP error messages: "Lost valid signal level on receiver"
 
-     if(GEN >= 2) begin
+     if(PCIE_GEN >= 2) begin
         idle_catcher = new();
         uvm_report_cb::add(null,idle_catcher);
 
