@@ -227,36 +227,7 @@ echo
 #Get start time for each simulation
 start_time="$(date -u +%s)"
 
-if [ $VCSMX -eq 1 ] ; then
-    vlogan -lca -timescale=1ps/1ps $VLOGAN_PARAMS -full64 -sverilog +vcs+lic+wait +systemverilogext+.sv+.v -error=noMPD -ntb_opts dtm \
-        +lint=TFIPC-L \
-        -ignore initializer_driver_checks \
-        $DEFINES \
-        $ELAB_OPTIONS $USER_DEFINED_ELAB_OPTIONS \
-        $USER_DEFINED_VLOG_OPTIONS \
-        +incdir+./ \
-        +incdir+$TEST_SRC_DIR/ \
-        $INC_DIR \
-        $VCS_FILELIST \
-        $BASE_AFU_SRC \
-        $TB_SRC +error+1 -l vlog.log 
-
-    vcs -full64 -ntb_opts -licqueue +vcs+lic+wait \
-        $QUARTUS_ROOTDIR/eda/sim_lib/quartus_dpi.c \
-        $QUARTUS_ROOTDIR/eda/sim_lib/simsf_dpi.cpp \
-        +lint=TFIPC-L \
-        -ignore initializer_driver_checks \
-        $ELAB_OPTIONS $USER_DEFINED_ELAB_OPTIONS -l vcs.log $TOP_LEVEL_NAME 
-
-    # ----------------------------------------
-    # simulate
-    # parse transcript to remove redundant comment block (fb:435978)
-    if [ $SKIP_SIM -eq 0 ]; then
-        ./simv $SIM_OPTIONS $USER_DEFINED_SIM_OPTIONS -l transcript
-    fi
-
-elif [ $MSIM -eq 1 ] ; then
-
+if [ $MSIM -eq 1 ] ; then
     vlib work
     vlog -mfcu -timescale=1ps/1ps $VLOG_PARAMS -lint -sv $SV_OPTS\
         $DEFINES \
@@ -274,30 +245,40 @@ elif [ $MSIM -eq 1 ] ; then
       vopt $TOP_LEVEL_NAME -o opt -access=rw+/. "${VOPT_SUPPRESS[@]}"
       vsim "${MSIM_OPTS[@]}"
     fi
-else # VCS
-
-    vcs -lca $CM_OPTIONS \
-        -timescale=1ps/1ps -full64 -sverilog +vcs+lic+wait +systemverilogext+.sv+.v -ntb_opts dtm \
-        $QUARTUS_ROOTDIR/eda/sim_lib/quartus_dpi.c \
-        $QUARTUS_ROOTDIR/eda/sim_lib/simsf_dpi.cpp \
-        $NTB_OPTS \
+else # VCS and VCS-MX
+    vlogan -lca -timescale=1ps/1ps $VLOGAN_PARAMS -full64 -sverilog +vcs+lic+wait +systemverilogext+.sv+.v -error=noMPD -ntb_opts dtm \
         +lint=TFIPC-L \
         -ignore initializer_driver_checks \
         $DEFINES \
         $ELAB_OPTIONS $USER_DEFINED_ELAB_OPTIONS \
+        $USER_DEFINED_VLOG_OPTIONS \
         +incdir+./ \
         +incdir+$TEST_SRC_DIR/ \
+        $INC_DIR \
         $VCS_FILELIST \
         $BASE_AFU_SRC \
-        $TB_SRC -top $TOP_LEVEL_NAME $VCS_ERROR_COUNT -l vcs.log "${VCS_CM_PARAMS[@]}"
+        $NTB_OPTS \
+        $TB_SRC +error+1 -l vlog.log
+
+    vcs -full64 -licqueue +vcs+lic+wait -partcomp -j8 \
+        $QUARTUS_ROOTDIR/eda/sim_lib/quartus_dpi.c \
+        $QUARTUS_ROOTDIR/eda/sim_lib/simsf_dpi.cpp \
+        +lint=TFIPC-L \
+        -ignore initializer_driver_checks \
+        $CM_OPTIONS "${VCS_CM_PARAMS[@]}" \
+        $VCS_ERROR_COUNT \
+        $ELAB_OPTIONS $USER_DEFINED_ELAB_OPTIONS -l vcs.log $TOP_LEVEL_NAME
 
     # ----------------------------------------
     # simulate
     # parse transcript to remove redundant comment block (fb:435978)
-
-   echo "VCS_SIMV_PARAMS=$VCS_SIMV_PARAMS"
     if [ $SKIP_SIM -eq 0 ]; then
-        ./simv $VCS_SIMV_PARAMS
+        if [ "$VCS_SIMV_PARAMS" != "" ]; then
+            echo "VCS_SIMV_PARAMS=$VCS_SIMV_PARAMS"
+            ./simv $VCS_SIMV_PARAMS
+        else
+            ./simv $SIM_OPTIONS $USER_DEFINED_SIM_OPTIONS -l transcript
+        fi
     fi
 fi
    

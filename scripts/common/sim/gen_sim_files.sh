@@ -162,7 +162,8 @@ echo "DEVICE=$DEVICE"
 if [ -v 3 ]; then
     FAMILY=$3
 elif [ -f "$QSF_FILE" ]; then
-    FAMILY=$(sed -n 's/^set_global_assignment -name FAMILY //p' $QSF_FILE | tr -d '"')
+    # Some Quartus tools expect family in all lower case with no spaces
+    FAMILY=$(sed -n 's/^set_global_assignment -name FAMILY //p' $QSF_FILE | tr -d '"[:space:]' | tr '[:upper:]' '[:lower:]')
 else
     echo "Error: No target family passed in to the script. "
     usage
@@ -188,6 +189,38 @@ rm -f "${SIM_SETUP_DIR}"/generated_*
 
 # Save last script invocation command for convenience
 echo "$CORE_COMMAND $COMMAND_INVOKED" > "${SIM_SETUP_DIR}"/generated_cmd.f
+
+
+# Pre-compile a shared version of Quartus simulation libraries. This takes 5-10
+# minutes and is independent of other work, so fork a process and do it in the
+# background.
+QLIBS_DIR="$SIM_SETUP_DIR"/qip_sim_script/quartus_libs
+rm -rf "$QLIBS_DIR"
+mkdir -p "$QLIBS_DIR"
+
+if command -v vlogan &> /dev/null; then
+    mkdir -p "$QLIBS_DIR"/vcsmx
+    (cd "$QLIBS_DIR"/vcsmx
+     quartus_sh --simlib_comp -family "$FAMILY" -tool vcsmx -language verilog >& ../vcsmx.log
+
+     # Rename the hidden generated setup file to a visible one that other scripts expect
+     if [ -f "$QLIBS_DIR"/vcsmx/.synopsys_vss.setup ]; then
+         mv "$QLIBS_DIR"/vcsmx/.synopsys_vss.setup "$QLIBS_DIR"/vcsmx/synopsys_sim.setup
+     fi
+    ) &
+fi
+
+## We could do the same for modelsim libraries, but there are too many problems
+## simulating IP when running modelsim in this mode. For now, Quartus libraries
+## are specified explicitly with each unit test.
+##
+#if command -v vlog &> /dev/null; then
+#    mkdir -p "$QLIBS_DIR"/mentor
+#    (cd "$QLIBS_DIR"/mentor
+#     quartus_sh --simlib_comp -family "$FAMILY" -tool questasim -language verilog >& ../mentor.log
+#    ) &
+#fi
+
 
 #
 # Run Quartus to load the project and dump a list of IP sources.
@@ -352,8 +385,6 @@ cat > "${SIM_SETUP_DIR}"/generated_rtl_flist.f <<EOF
 -F generated_rtl_flist_verilog.f
 EOF
 
-
-
 echo "**** Generating simulation setup for $OFS_TARGET ****"
 
 unset spd_list
@@ -378,9 +409,16 @@ done < "$SIM_SETUP_DIR"/generated_ip_flist.f
 ip-make-simscript --spd="${spd_list}" --use-relative-paths --output-directory="$SIM_SETUP_DIR"/qip_sim_script --device-family="$FAMILY"
 
 make_simscript_status=$?
-
 if [ $make_simscript_status -ne 0 ]; then
     echo "Simulation setup generation failed. Check the errors for details."
+    exit -1
+fi
+
+# Wait for the background job that is building Quartus simulation libraries
+echo "Waiting for quartus_sh --simplib_comp to finish..."
+wait
+if [ $? -ne 0 ]; then
+    echo "quartus_sh --simplib_comp error while generating $QLIBS_DIR"
     exit -1
 fi
 
