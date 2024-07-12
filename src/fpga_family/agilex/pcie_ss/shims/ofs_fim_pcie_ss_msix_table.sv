@@ -3691,40 +3691,31 @@ module ofs_fim_pcie_ss_msix_table
       INTC_INT_OUT   : begin
                           Intc_state <= intc_st_tx_tready ? INTC_IDLE : INTC_HOLD;
                           intc_in_progress <= ~intc_st_tx_tready;
-                          if (msix_rdata[2]==0) begin
-                            intc_st_tx_hdr[9:0]     <= 10'h1;
-                            intc_st_tx_hdr[23:10]   <= 0;
+                          intc_st_tx_hdr[9:0]     <= 10'h1;
+                          intc_st_tx_hdr[23:10]   <= 0;
+                          intc_st_tx_hdr[35:32]   <= 4'hF;
+                          intc_st_tx_hdr[63:36]   <= 0;
+                          intc_st_tx_hdr[159:128] <= intc_prefix;
+                          intc_st_tx_hdr[162:160] <= intc_pf_num;
+                          intc_st_tx_hdr[173:163] <= intc_vf_num;
+                          intc_st_tx_hdr[174]     <= intc_vf_active;
+                          intc_st_tx_hdr[178:175] <= 0;
+                          intc_st_tx_hdr[183:179] <= 0;
+                          intc_st_tx_hdr[185:184] <= 0;
+                          intc_st_tx_hdr[255:186] <= 0;
+                          if (msix_rdata[1]==0) begin
+                            // MWr32
                             intc_st_tx_hdr[31:24]   <= {3'b010,5'b00000};
-                            intc_st_tx_hdr[35:32]   <= 4'hF;
-                            intc_st_tx_hdr[63:36]   <= 0;
                             intc_st_tx_hdr[95:64]   <= msix_rdata[0][31:0];
                             intc_st_tx_hdr[127:96]  <= 0;
-                            intc_st_tx_hdr[159:128] <= intc_prefix;
-                            intc_st_tx_hdr[162:160] <= intc_pf_num;
-                            intc_st_tx_hdr[173:163] <= intc_vf_num;
-                            intc_st_tx_hdr[174]     <= intc_vf_active;
-                            intc_st_tx_hdr[178:175] <= 0;
-                            intc_st_tx_hdr[183:179] <= 0;
-                            intc_st_tx_hdr[185:184] <= 0;
-                            intc_st_tx_hdr[255:186] <= 0;
                           end
                           else begin
-                            intc_st_tx_hdr[9:0]     <= 10'h1;
-                            intc_st_tx_hdr[23:10]   <= 0;
+                            // MWr64
                             intc_st_tx_hdr[31:24]   <= {3'b011,5'b00000};
-                            intc_st_tx_hdr[35:32]   <= 4'hF;
-                            intc_st_tx_hdr[63:36]   <= 0;
                             intc_st_tx_hdr[95:64]   <= msix_rdata[1][31:0];
                             intc_st_tx_hdr[127:96]  <= msix_rdata[0][31:0];
-                            intc_st_tx_hdr[159:128] <= intc_prefix;
-                            intc_st_tx_hdr[162:160] <= intc_pf_num;
-                            intc_st_tx_hdr[173:163] <= intc_vf_num;
-                            intc_st_tx_hdr[174]     <= intc_vf_active;
-                            intc_st_tx_hdr[178:175] <= 0;
-                            intc_st_tx_hdr[183:179] <= 0;
-                            intc_st_tx_hdr[185:184] <= 0;
-                            intc_st_tx_hdr[255:186] <= 0;
                           end
+
                           intc_st_tx_data[31:0]   <= msix_rdata[2][31:0];
                           intc_st_tx_tvalid       <= 1'b1;
                         end
