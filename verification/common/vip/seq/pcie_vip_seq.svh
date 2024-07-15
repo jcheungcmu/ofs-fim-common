@@ -133,20 +133,17 @@ endclass: pcie_wr_mmio_seq
 
      virtual task body();
     
-      foreach(data_seq[i]) begin  `uvm_info(get_name(), $psprintf("HOST_PCIE_MEM_WRITE_RAND_DATA_SEQ[%d] :- %h \n",i,data_seq[i]), UVM_LOW)end
-         `uvm_info(get_name(), $psprintf("HOST_PCIE_MEM_WRITE_RAND_DATA_SEQ[] :- Inside mem_write_seq \n"), UVM_LOW)
-        `uvm_create(wr_trans)
+         `uvm_create(wr_trans)
 
           wr_trans.service_type      = `PCIE_MEM_SERV ::WRITE_BUFFER;
 	  wr_trans.address           = address;
-          //foreach (data_[i]) begin  wr_trans.data_buf[i]      =  data_[i]; `uvm_info(get_name(), $psprintf("HOST_PCIE_MEM_WRITE_SENT_RAND_DATA_SEQ[%d] :- %h \n",i,wr_trans.data_buf[i]), UVM_LOW)end
-          wr_trans.data_buf = new[dword_length] (this.data_seq);
+          wr_trans.data_buf          = this.data_seq;
 	  wr_trans.dword_length      =  dword_length;
 	  wr_trans.first_byte_enable = 4'hf;
 	  wr_trans.last_byte_enable  = 4'hf;
 	  wr_trans.byte_enables      = 4'hf;
         
-      `uvm_send(wr_trans)
+          `uvm_send(wr_trans)
     
      endtask: body
      
