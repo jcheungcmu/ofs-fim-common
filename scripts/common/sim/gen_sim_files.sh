@@ -194,14 +194,24 @@ echo "$CORE_COMMAND $COMMAND_INVOKED" > "${SIM_SETUP_DIR}"/generated_cmd.f
 # Pre-compile a shared version of Quartus simulation libraries. This takes 5-10
 # minutes and is independent of other work, so fork a process and do it in the
 # background.
+rm -rf "$SIM_SETUP_DIR"/qip_sim_script
 QLIBS_DIR="$SIM_SETUP_DIR"/qip_sim_script/quartus_libs
-rm -rf "$QLIBS_DIR"
 mkdir -p "$QLIBS_DIR"
 
 if command -v vlogan &> /dev/null; then
     mkdir -p "$QLIBS_DIR"/vcsmx
     (cd "$QLIBS_DIR"/vcsmx
-     quartus_sh --simlib_comp -family "$FAMILY" -tool vcsmx -language verilog >& ../vcsmx.log
+     quartus_sh --simlib_comp -family "$FAMILY" -tool vcsmx -language verilog -cmd_file ../vcsmx_cmd_file.sh -gen_only &> ../vcsmx.log
+
+     # F-Tile UVM PCIe/HSSI training depends on some preprocessor macros.
+     # Update the command file before running it.
+     if [ "$TILE" == "F-Tile" -o "$TILE_HIGHSPEED" == "F-Tile" ]; then
+         sed -i -e 's/^vlogan /vlogan +define+IP7581SERDES_UX_SIMSPEED +define+TIMESCALE_EN +define+RTLSIM +define+INTC_FUNCTIONAL +define+SSM_SEQUENCE +define+SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SIMULATION +define+IP7581SERDES_UXS2T1R1PGD_PIPE_FAST_SIM +define+SRC_SPEC_SPEED_UP +define+__SRC_TEST__ /' ../vcsmx_cmd_file.sh
+     fi
+
+     # Parse the sources
+     chmod a+x ../vcsmx_cmd_file.sh
+     ../vcsmx_cmd_file.sh &>> ../vcsmx.log
 
      # Rename the hidden generated setup file to a visible one that other scripts expect
      if [ -f "$QLIBS_DIR"/vcsmx/.synopsys_vss.setup ]; then
@@ -217,7 +227,8 @@ fi
 #if command -v vlog &> /dev/null; then
 #    mkdir -p "$QLIBS_DIR"/mentor
 #    (cd "$QLIBS_DIR"/mentor
-#     quartus_sh --simlib_comp -family "$FAMILY" -tool questasim -language verilog >& ../mentor.log
+#     quartus_sh --simlib_comp -family "$FAMILY" -tool questasim -language verilog -cmd_file ../vcsmx_cmd_file.sh -gen_only >& ../mentor.log
+#     ...
 #    ) &
 #fi
 
@@ -326,10 +337,15 @@ fi
  echo '## choses OFS features. Updated by gen_sim_files.sh.' >> "${SIM_SETUP_DIR}"/generated_rtl_flist_macros.f
  echo '' >> "${SIM_SETUP_DIR}"/generated_rtl_flist_macros.f
  sed -e 's/^\([A-Za-z]\)/+define+\1/' -e 's/\(+define+INCLUDE_\)/# \1/' project_macros_for_sim.f >> "${SIM_SETUP_DIR}"/generated_rtl_flist_macros.f
+
+ # Uncomment any macro defining a tile. We assume tile-dependent features
+ # are required.
+ sed -i '/TILE$/s/^# *//g' "${SIM_SETUP_DIR}"/generated_rtl_flist_macros.f
+
  # Uncomment the memory technology macro. It is still controlled by INCLUDE_LOCAL_MEM
  # so enabling the technology macro allows the project to autoconfigure the testbench for tests that enable local mem.
- sed -i '/DDR[0-9]\+$/s/^#//g' "${SIM_SETUP_DIR}"/generated_rtl_flist_macros.f
- sed -i '/HBM$/s/^#//g' "${SIM_SETUP_DIR}"/generated_rtl_flist_macros.f
+ sed -i '/DDR[0-9]\+$/s/^# *//g' "${SIM_SETUP_DIR}"/generated_rtl_flist_macros.f
+ sed -i '/HBM$/s/^# *//g' "${SIM_SETUP_DIR}"/generated_rtl_flist_macros.f
 
  # Include paths. Strip +incdir+, change the path, then put +incdir+ back.
  grep '^+incdir+' project_sources_rtl_for_sim.f > project_sources_rtl_incdirs.f

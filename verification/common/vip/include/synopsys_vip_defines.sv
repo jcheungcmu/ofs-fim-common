@@ -16,7 +16,9 @@
  * Top level PCIe ,AXI and ETH VIP defines for VIP class, interface, tests, sequence, transactions etc. at common place.
  */
  
-
+`ifdef SVT_PCIE_OPTIMIZED_COMPILE
+   `include "import_pcie_svt_uvm_pkgs.svi"
+`endif
 
    `define     PCIE_DRIVER_TRANSACTION_BASE_SEQ_CLASS                  svt_pcie_driver_app_transaction_base_sequence
    `define     PCIE_DRIVER_TRANSACTION_CLASS                           svt_pcie_driver_app_transaction
