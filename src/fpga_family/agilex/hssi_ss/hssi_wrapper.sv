@@ -296,7 +296,7 @@ generate
    for (genvar nump=0; nump<NUM_PORT; nump++) begin : GenRst
       rst_ack tx_rst_ack(
          .i_clk(clk_csr),
-         .i_rst(~rst_n_csr | tx_rst[nump]),
+         .i_rst(rst_n_csr ? tx_rst[nump] : 1'b1),
       `ifdef INCLUDE_FTILE
          .i_ack(sync_tx_rst_ack[nump]),
       `else
@@ -307,7 +307,7 @@ generate
 
       rst_ack rx_rst_ack(
          .i_clk(clk_csr),
-         .i_rst(~rst_n_csr | rx_rst[nump]),
+         .i_rst(rst_n_csr ? rx_rst[nump] : 1'b1),
       `ifdef INCLUDE_FTILE
          .i_ack(sync_rx_rst_ack[nump]),
       `else
@@ -320,7 +320,7 @@ endgenerate
 
 rst_ack cold_rst_ack(
    .i_clk(clk_csr),
-   .i_rst(~rst_n_csr | cold_rst),
+   .i_rst(rst_n_csr ? cold_rst : 1'b1),
    .i_ack(sync_cold_rst_ack),
    .o_rst(handshaked_cold_rst)
 );

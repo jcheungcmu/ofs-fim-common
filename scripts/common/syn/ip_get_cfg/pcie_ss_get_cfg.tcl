@@ -72,7 +72,7 @@ proc emit_ip_cfg {ofile_name ip_name} {
             regsub -all { +} $top_topology {_} top_topology
 
             # Extract the PCIe generation number from top topology (GenA_LXW)
-            if { [regsub -all {.*_+GEN([0-9]+)_.*} $top_topology {\1} topology_pcie_gen] == 0 } {
+            if { [regsub -all {.*GEN([0-9]+)_.*} $top_topology {\1} topology_pcie_gen] == 0 } {
                 # Pattern match failed. Assume 4.
                 set topology_pcie_gen 4
             }
