@@ -176,6 +176,12 @@ TILE_HIGHSPEED=$(quartus_sh --tcl_eval get_part_info -highspeed_tile $DEVICE)
 echo "TILE=$TILE"
 echo "TILE_HIGHSPEED=$TILE_HIGHSPEED"
 
+HAS_FTILE=false
+if [[ "$TILE" =~ "F-Tile" || "$TILE_HIGHSPEED" =~ "F-Tile" ]]; then
+    HAS_FTILE=true
+    echo "Configuring F-Tile simulation"
+fi
+
 # Find the PIM source repository, needed for scripts. If not already present,
 # the repository will already have been fetched by build_top.sh above.
 if [ -z "${OFS_PLATFORM_AFU_BBB}" ]; then
@@ -205,7 +211,7 @@ if command -v vlogan &> /dev/null; then
 
      # F-Tile UVM PCIe/HSSI training depends on some preprocessor macros.
      # Update the command file before running it.
-     if [ "$TILE" == "F-Tile" -o "$TILE_HIGHSPEED" == "F-Tile" ]; then
+     if $HAS_FTILE; then
          sed -i -e 's/^vlogan /vlogan +define+IP7581SERDES_UX_SIMSPEED +define+TIMESCALE_EN +define+RTLSIM +define+INTC_FUNCTIONAL +define+SSM_SEQUENCE +define+SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SIMULATION +define+IP7581SERDES_UXS2T1R1PGD_PIPE_FAST_SIM +define+SRC_SPEC_SPEED_UP +define+__SRC_TEST__ /' ../vcsmx_cmd_file.sh
      fi
 
@@ -286,7 +292,7 @@ if [ ! -z "${__NB_JOBID}" -a ! -z "${ARC_JOB_STORAGE}" ]; then
     qsys_gen_extra_args="--parallel=off"
 fi
 
-if [ "$TILE" == "F-Tile" -o "$TILE_HIGHSPEED" == "F-Tile" ]; then
+if $HAS_FTILE; then
     # Generate synthesis files for quartus elaboration during TLG
     qsys_gen_extra_args="$qsys_gen_extra_args --synthesis=VERILOG"
 fi
@@ -301,7 +307,7 @@ fi
 echo "**** Done generating HDL for $OFS_TARGET ****"
 
 # Quartus Tile logic generation (F-Tile specific flow)
-if [ "$TILE" == "F-Tile" -o "$TILE_HIGHSPEED" == "F-Tile" ]; then
+if $HAS_FTILE; then
     (cd "${PROJECT_DIR}"
      echo "**** Generating support logic files ****"
      quartus_tlg  ${Q_PROJECT} -c ${Q_REVISION}
