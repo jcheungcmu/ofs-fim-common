@@ -333,7 +333,7 @@ proc emit_ip_cfg {ofile_name ip_name} {
     # this is working around an issue where the load_system is not working unless
     # the ip is avialable in the working directory
     if { [file exists $ip_file_name] == 0} { 
-        exec ln -s ${ip_file} .
+        exec ln -fs ${ip_file} .
     }
     create_system t1
     add_component mem_ss_inst $ip_file
