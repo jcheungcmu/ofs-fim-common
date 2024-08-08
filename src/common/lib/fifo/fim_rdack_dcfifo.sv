@@ -33,6 +33,10 @@ module fim_rdack_dcfifo #(
    // Number of busy entries at which w_ready will go low.
    // Defaults to half full.
    parameter ALMOST_FULL_THRESHOLD = 2 ** (DEPTH_LOG2 - 1),
+
+   // Register the output (ON or OFF)?
+   parameter ADD_RAM_OUTPUT_REGISTER = "OFF",
+
    parameter WRITE_ACLR_SYNC = "OFF", // ON/OFF
    parameter READ_ACLR_SYNC = "OFF"   // ON/OFF
 )(
@@ -105,6 +109,7 @@ fim_dcfifo #(
    .DATA_WIDTH              (DATA_WIDTH),
    .DEPTH_RADIX             (DEPTH_LOG2),
    .ALMOST_FULL_THRESHOLD   (ALMOST_FULL_THRESHOLD),
+   .ADD_RAM_OUTPUT_REGISTER (ADD_RAM_OUTPUT_REGISTER),
    .WRITE_ACLR_SYNC         (WRITE_ACLR_SYNC),
    .READ_ACLR_SYNC          (READ_ACLR_SYNC),
    .OVERFLOW_CHECKING_PARAM ("OFF"),

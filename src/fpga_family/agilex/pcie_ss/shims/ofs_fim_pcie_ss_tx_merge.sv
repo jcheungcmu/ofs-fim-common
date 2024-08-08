@@ -43,7 +43,8 @@ module ofs_fim_pcie_ss_tx_merge
           #(
             .TILE(TILE),
             .PORT_ID(PORT_ID),
-            .NUM_OF_SEG(NUM_OF_SEG)
+            .NUM_OF_SEG(NUM_OF_SEG),
+            .REGISTER_OUTPUT(1)
             )
           merge
            (

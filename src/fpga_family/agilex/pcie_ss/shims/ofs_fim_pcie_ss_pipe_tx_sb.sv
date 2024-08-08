@@ -203,7 +203,8 @@ module ofs_fim_pcie_ss_pipe_tx_sb
       #(
         // Relatively shallow buffer. Extra buffering only makes managing
         // QoS in an AFU harder and doesn't improve throughput.
-        .DEPTH_LOG2(4)
+        .DEPTH_LOG2(4),
+        .REG_OUT(1)
         )
       txreq_cdc(.axis_s(txreq_cpl_meter), .axis_m(txreq_hip));
 
@@ -230,7 +231,8 @@ module ofs_fim_pcie_ss_pipe_tx_sb
       #(
         .DEPTH_LOG2(TX_CDC_DEPTH_LOG2 > 5 ? TX_CDC_DEPTH_LOG2 : 5),
         // Delay output until full packets are queued
-        .DENSE_OUTPUT(1)
+        .DENSE_OUTPUT(1),
+        .REG_OUT(1)
         )
       tx_cdc(.axis_s(tx_cpl_meter), .axis_m(tx_hip));
 

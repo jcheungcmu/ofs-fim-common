@@ -23,6 +23,7 @@ module fim_dcfifo
     parameter OVERFLOW_CHECKING_PARAM  = "ON",    
     parameter UNDERFLOW_CHECKING_PARAM = "ON",
     parameter LPM_SHOWAHEAD_PARAM      = "OFF",
+    parameter ADD_RAM_OUTPUT_REGISTER  = "OFF",
 
     parameter ADD_USEDW_MSB_BIT_PARAM  = "ON",
     parameter RDSYNC_DELAYPIPE_PARAM   = 5,
@@ -102,6 +103,7 @@ module fim_dcfifo
      dcfifo_component.enable_ecc         = "FALSE",
      dcfifo_component.lpm_hint           = "DISABLE_DCFIFO_EMBEDDED_TIMING_CONSTRAINT=TRUE",
      dcfifo_component.lpm_numwords       = 2**DEPTH_RADIX,  //debth of the FIFO always 2**lpm_widthu
+     dcfifo_component.add_ram_output_register = ADD_RAM_OUTPUT_REGISTER,
      dcfifo_component.lpm_showahead      = LPM_SHOWAHEAD_PARAM,
      dcfifo_component.lpm_type           = "dcfifo",
      dcfifo_component.lpm_width          = DATA_WIDTH,      // width of the data port

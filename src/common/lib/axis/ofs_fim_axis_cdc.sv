@@ -17,7 +17,10 @@ module ofs_fim_axis_cdc #(
 
    // Guarantee that outbound packets have no breaks? If non-zero, outbound
    // packets are held until the entire packet has been pushed into the FIFO.
-   parameter DENSE_OUTPUT       = 0
+   parameter DENSE_OUTPUT       = 0,
+
+   // Add an extra register stage out of the clock crossing RAM when non-zero.
+   parameter REG_OUT            = 0
 )(
    pcie_ss_axis_if.sink   axis_s,
    pcie_ss_axis_if.source axis_m
@@ -54,6 +57,7 @@ fim_rdack_dcfifo #(
    .DATA_WIDTH            (DATA_WIDTH),
    .DEPTH_LOG2            (DEPTH_LOG2),
    .ALMOST_FULL_THRESHOLD (ALMFULL_THRESHOLD+2),
+   .ADD_RAM_OUTPUT_REGISTER(REG_OUT ? "ON" : "OFF"),
    .READ_ACLR_SYNC        ("ON")
 ) fifo (
    .wclk      (axis_s.clk),
@@ -85,6 +89,7 @@ begin : d
       .DATA_WIDTH            (1),
       .DEPTH_LOG2            (DEPTH_LOG2),
       .ALMOST_FULL_THRESHOLD (ALMFULL_THRESHOLD+2),
+      .ADD_RAM_OUTPUT_REGISTER(REG_OUT ? "ON" : "OFF"),
       .READ_ACLR_SYNC        ("ON")
    ) tlast_fifo (
       .wclk      (axis_s.clk),
