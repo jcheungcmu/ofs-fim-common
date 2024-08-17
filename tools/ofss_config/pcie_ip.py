@@ -217,6 +217,21 @@ class PCIe(OFS):
             if self.num_vfs > 0:
                 self.ip_component_params["core16_enable_sriov_hwtcl"] = 1
 
+            # A bug in the PCIe AXI streaming IP starting with 24.2 causes
+            # the bus width on P-Tile Gen4x16 to default to 32 bytes when
+            # it should be 64. Force Gen4x16 to 64 bytes.
+            pcie_width_bug = False
+            if self.ip_component == "intel_pcie_ss_axi":
+                try:
+                    if int(self.pcie_gen) == 4 and int(self.pcie_lane_width) == 16:
+                        pcie_width_bug = True
+                except:
+                    # If PCIe gen or lane width is undefined, assume the same
+                    pcie_width_bug = True
+            if pcie_width_bug:
+                self.ip_component_params["core16_dwidth_byte_user_hwtcl"] = 64
+                self.ip_component_params["core16_num_seg_user_hwtcl"] = 2
+
             # The PCIe SS stores a second link's configuration in parameters
             # beginning with "core8_". Replicate the first link's configuration.
             # OFS expects the two links to be configured identically.
