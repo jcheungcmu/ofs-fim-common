@@ -64,8 +64,13 @@ package ofs_fim_mem_if_pkg;
    parameter AXI_MEM_RID_WIDTH        = 1;
    parameter AXI_MEM_RUSER_WIDTH      = 1;
 `endif
+`ifdef INCLUDE_HBM
+   // Max request size for NOC with 64B bus
+   localparam AXI_MEM_BURST_LEN_WIDTH = 6;
+`else 
    // This is defined by the AXI standard
    localparam AXI_MEM_BURST_LEN_WIDTH = 8;
+`endif
    // TODO: Temporary
    localparam NUM_HBM_DEVICES = 2;
 

@@ -178,20 +178,19 @@ end //for
 // 2. PR Freeze: AFU-MEM_IF to MEM SS
 // ----------------------------------------------------------------------------------------------------
 `ifdef INCLUDE_LOCAL_MEM
+   `ifdef INCLUDE_PR
+        localparam MEM_REG_MODE = ST_SKID_BUFFER;
+   `elsif INCLUDE_HBM
+        localparam MEM_REG_MODE = ST_SKID_BUFFER;
+   `else 
+        localparam MEM_REG_MODE = ST_BYPASS;
+   `endif
     
-    `ifdef INCLUDE_PR 
-        localparam W_REG_MODE     =MM_SKID_BUFFER; 
-        localparam R_REG_MODE     =MM_SKID_BUFFER; 
-        localparam AW_REG_MODE    =MM_SKID_BUFFER; 
-        localparam B_REG_MODE     =MM_SKID_BUFFER; 
-        localparam AR_REG_MODE    =MM_SKID_BUFFER; 
-    `else // INCLUDE_PR
-        localparam W_REG_MODE     =MM_BYPASS; 
-        localparam R_REG_MODE     =MM_BYPASS; 
-        localparam AW_REG_MODE    =MM_BYPASS; 
-        localparam B_REG_MODE     =MM_BYPASS; 
-        localparam AR_REG_MODE    =MM_BYPASS; 
-    `endif //INCLUDE_PR
+   localparam W_REG_MODE     =MEM_REG_MODE; 
+   localparam R_REG_MODE     =MEM_REG_MODE; 
+   localparam AW_REG_MODE    =MEM_REG_MODE; 
+   localparam B_REG_MODE     =MEM_REG_MODE; 
+   localparam AR_REG_MODE    =MEM_REG_MODE;
 
    ofs_fim_emif_axi_mm_if #(
       .AWID_WIDTH   ($bits(afu_mem_if[0].awid)),

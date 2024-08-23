@@ -185,3 +185,8 @@ always_comb begin \
    ``IFC``.rlast    = ``WIRE``_rlast; \
    ``IFC``.ruser    = ``WIRE``_ruser; \
 end
+
+// A Macro to connect an OFS AXI burstlen padding to NOC
+`define CONNECT_AND_EXTEND_NOC_BURSTLEN(IPORT, PAD_WIDTH) \
+   .``IPORT``_arlen     ({``PAD_WIDTH``'b0,``IPORT``_arlen}), \
+   .``IPORT``_awlen     ({``PAD_WIDTH``'b0,``IPORT``_awlen}), 

@@ -11,7 +11,7 @@ module mem_ss_tg (
 		input  wire         ninit_done,           //       ninit_done.ninit_done
 		input  wire         emif_usr_clk,         //     emif_usr_clk.clk
 		output wire [8:0]   axi_awid,             //         ctrl_axi.awid
-		output wire [31:0]  axi_awaddr,           //                 .awaddr
+		output wire [44:0]  axi_awaddr,           //                 .awaddr
 		output wire         axi_awvalid,          //                 .awvalid
 		output wire [0:0]   axi_awuser,           //                 .awuser
 		output wire [7:0]   axi_awlen,            //                 .awlen
@@ -22,7 +22,7 @@ module mem_ss_tg (
 		output wire [3:0]   axi_awcache,          //                 .awcache
 		output wire [2:0]   axi_awprot,           //                 .awprot
 		output wire [8:0]   axi_arid,             //                 .arid
-		output wire [31:0]  axi_araddr,           //                 .araddr
+		output wire [44:0]  axi_araddr,           //                 .araddr
 		output wire         axi_arvalid,          //                 .arvalid
 		output wire [0:0]   axi_aruser,           //                 .aruser
 		output wire [7:0]   axi_arlen,            //                 .arlen
@@ -78,7 +78,7 @@ module mem_ss_tg (
 		.NUM_OF_CTRL_PORTS                     (1),
 		.CTRL_AVL_PROTOCOL_ENUM                (""),
 		.USE_AVL_BYTEEN                        (0),
-		.AMM_WORD_ADDRESS_WIDTH                (26),
+		.AMM_WORD_ADDRESS_WIDTH                (36),
 		.AMM_WORD_ADDRESS_DIVISIBLE_BY         (1),
 		.AMM_BURST_COUNT_DIVISIBLE_BY          (1),
 		.TEST_DURATION                         ("SHORT"),
@@ -90,9 +90,9 @@ module mem_ss_tg (
 		.AVL_TO_DQ_WIDTH_RATIO                 (8),
 		.CORE_CLK_FREQ_HZ                      (300000000),
 		.CTRL_INTERFACE_TYPE                   ("AXI"),
-		.PORT_SUBSYSTEM_CSR_AXI4L_AWADDR_WIDTH (23),
+		.PORT_SUBSYSTEM_CSR_AXI4L_AWADDR_WIDTH (44),
 		.PORT_SUBSYSTEM_CSR_AXI4L_AWPROT_WIDTH (3),
-		.PORT_SUBSYSTEM_CSR_AXI4L_ARADDR_WIDTH (23),
+		.PORT_SUBSYSTEM_CSR_AXI4L_ARADDR_WIDTH (44),
 		.PORT_SUBSYSTEM_CSR_AXI4L_ARPROT_WIDTH (3),
 		.PORT_SUBSYSTEM_CSR_AXI4L_WDATA_WIDTH  (32),
 		.PORT_SUBSYSTEM_CSR_AXI4L_WSTRB_WIDTH  (4),
@@ -100,7 +100,7 @@ module mem_ss_tg (
 		.PORT_SUBSYSTEM_CSR_AXI4L_RDATA_WIDTH  (32),
 		.PORT_SUBSYSTEM_CSR_AXI4L_RRESP_WIDTH  (2),
 		.PORT_CTRL_AXI4_AWID_WIDTH             (9),
-		.PORT_CTRL_AXI4_AWADDR_WIDTH           (32),
+		.PORT_CTRL_AXI4_AWADDR_WIDTH           (44),
 		.PORT_CTRL_AXI4_AWUSER_WIDTH           (1),
 		.PORT_CTRL_AXI4_AWLEN_WIDTH            (8),
 		.PORT_CTRL_AXI4_AWSIZE_WIDTH           (3),
@@ -109,7 +109,7 @@ module mem_ss_tg (
 		.PORT_CTRL_AXI4_AWCACHE_WIDTH          (4),
 		.PORT_CTRL_AXI4_AWPROT_WIDTH           (3),
 		.PORT_CTRL_AXI4_ARID_WIDTH             (9),
-		.PORT_CTRL_AXI4_ARADDR_WIDTH           (32),
+		.PORT_CTRL_AXI4_ARADDR_WIDTH           (44),
 		.PORT_CTRL_AXI4_ARUSER_WIDTH           (1),
 		.PORT_CTRL_AXI4_ARLEN_WIDTH            (8),
 		.PORT_CTRL_AXI4_ARSIZE_WIDTH           (3),

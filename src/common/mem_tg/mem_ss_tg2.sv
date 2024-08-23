@@ -5,7 +5,7 @@
 module mem_ss_tg2
   #(
     parameter PORT_CTRL_AXI4_AWID_WIDTH          = 1,
-    parameter PORT_CTRL_AXI4_AWADDR_WIDTH        = 31,
+    parameter PORT_CTRL_AXI4_AWADDR_WIDTH        = 44,
     parameter PORT_CTRL_AXI4_AWUSER_WIDTH        = 8,
     parameter PORT_CTRL_AXI4_AWLEN_WIDTH         = 8,
     parameter PORT_CTRL_AXI4_AWSIZE_WIDTH        = 3,
@@ -14,7 +14,7 @@ module mem_ss_tg2
     parameter PORT_CTRL_AXI4_AWCACHE_WIDTH       = 4,
     parameter PORT_CTRL_AXI4_AWPROT_WIDTH        = 3,
     parameter PORT_CTRL_AXI4_ARID_WIDTH          = 1,
-    parameter PORT_CTRL_AXI4_ARADDR_WIDTH        = 31,
+    parameter PORT_CTRL_AXI4_ARADDR_WIDTH        = 44,
     parameter PORT_CTRL_AXI4_ARUSER_WIDTH        = 8,
     parameter PORT_CTRL_AXI4_ARLEN_WIDTH         = 8,
     parameter PORT_CTRL_AXI4_ARSIZE_WIDTH        = 3,
@@ -37,7 +37,7 @@ module mem_ss_tg2
  input wire                                     tg_cfg_read,
  input wire                                     tg_cfg_write,
  input wire [9:0]                               tg_cfg_address,
- output wire [31:0]                             tg_cfg_readdata,
+ output wire [44:0]                             tg_cfg_readdata,
  input wire [31:0]                              tg_cfg_writedata,
  output wire                                    tg_cfg_readdatavalid, 
  input wire                                     emif_usr_reset_n, // emif_usr_reset_n.reset_n
@@ -103,7 +103,7 @@ module mem_ss_tg2
 		.NUM_OF_CTRL_PORTS                     (1),
 		.CTRL_AVL_PROTOCOL_ENUM                (""),
 		.USE_AVL_BYTEEN                        (0),
-		.AMM_WORD_ADDRESS_WIDTH                (27),
+		.AMM_WORD_ADDRESS_WIDTH                (36),
 		.AMM_WORD_ADDRESS_DIVISIBLE_BY         (1),
 		.AMM_BURST_COUNT_DIVISIBLE_BY          (1),
 		.TEST_DURATION                         ("SHORT"),
