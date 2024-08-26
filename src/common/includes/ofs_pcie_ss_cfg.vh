@@ -25,6 +25,9 @@
 // Defined when ofs_pcie_ss_cfg_pkg::TUSER_STORE_COMMIT_REQ_BIT is available.
 `define OFS_PCIE_SS_CFG_FLAG_TUSER_STORE_COMMIT_REQ 1
 
+// Indicate the FIM provides pcie_ss_hdr_pkg::ReqHdr_pf_vf_id_t. Added 2024-08.
+`define OFS_PCIE_SS_CFG_FLAG_HAS_REQHDR_PF_VF_ID_T 1
+
 // Primarily, this flag indicates that ofs_pcie_ss_cfg_pkg::CPL_REORDER_EN
 // is defined. The macro also indicates whether completion reordering is
 // enabled in the PCIe SS, set to either 0 (disabled) or 1 (enabled).

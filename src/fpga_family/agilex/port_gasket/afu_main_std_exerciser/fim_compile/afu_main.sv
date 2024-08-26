@@ -12,6 +12,10 @@
 
 `include "fpga_defines.vh"
 
+`ifndef OPAE_PLATFORM_GEN
+`include "ofs_plat_if.vh"
+`endif
+
 module afu_main 
 #(
    parameter PG_NUM_LINKS    = 1,
@@ -27,10 +31,9 @@ module afu_main
 
    parameter pf_vf_mux_pkg::t_pfvf_rtable_entry[PG_NUM_RTABLE_ENTRIES-1:0] PG_PFVF_ROUTING_TABLE = {PG_NUM_RTABLE_ENTRIES{pf_vf_mux_pkg::t_pfvf_rtable_entry'(0)}},
 
-   // When set, afu_main will pass the link number set in PORT_PF_VF_INFO on to
-   // port_afu_instances(). The parameter is used mainly by ASE, which does not
-   // have underlying support for multiple links. Most configurations should
-   // not set this parameter in the parent and leave it at the default.
+   // Used in simulation by ASE to emulate multiple links. ASE PCIe emulation
+   // supports only one link. The multi-link ASE environment adds an extra PF/VF
+   // MUX before afu_main() and requires unique VFs across all links.
    parameter LINK_NUM_FROM_PORT_INFO = 0
 )(
    input  logic clk,
@@ -77,16 +80,22 @@ module afu_main
    ofs_jtag_if.sink              remote_stp_jtag_if
 );
 
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+   localparam IS_MULTIPLEXED = 1;
+`else
+   localparam IS_MULTIPLEXED = 0;
+`endif
+
 //PCIe port pipelines
 localparam PL_DEPTH       = 1;
 localparam TDATA_WIDTH    = pcie_ss_axis_pkg::TDATA_WIDTH;
 localparam TUSER_WIDTH    = pcie_ss_axis_pkg::TUSER_WIDTH;
 localparam TOTAL_PORTS    = PG_NUM_LINKS * PG_NUM_PORTS;
 
-(* altera_attribute = {"-name PRESERVE_REGISTER_SYN_ONLY ON"} *) reg [TOTAL_PORTS-1:0] port_rst_n_q1 = {TOTAL_PORTS{1'b0}};
-(* altera_attribute = {"-name PRESERVE_REGISTER_SYN_ONLY ON"} *) reg [TOTAL_PORTS-1:0] port_rst_n_q2 = {TOTAL_PORTS{1'b0}};
-// A duplication tree will map port_rst_n_q2 to port_rst_n_tree
-reg [TOTAL_PORTS-1:0] port_rst_n_tree;
+(* altera_attribute = {"-name PRESERVE_REGISTER_SYN_ONLY ON"} *)
+reg [PG_NUM_LINKS-1:0][PG_NUM_PORTS-1:0] port_rst_n_q1 = {TOTAL_PORTS{1'b0}};
+(* altera_attribute = {"-name PRESERVE_REGISTER_SYN_ONLY ON"} *)
+reg [PG_NUM_LINKS-1:0][PG_NUM_PORTS-1:0] port_rst_n_q2 = {TOTAL_PORTS{1'b0}};
 
 reg rst_n_tree;
 fim_dup_tree dup_rst(.clk, .din(rst_n), .dout(rst_n_tree));
@@ -97,14 +106,31 @@ pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) afu_axi_rx_a_if_
 pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) afu_axi_tx_b_if_t1 [PG_NUM_LINKS-1:0](.clk(clk), .rst_n(rst_n_tree));
 pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) afu_axi_rx_b_if_t1 [PG_NUM_LINKS-1:0](.clk(clk), .rst_n(rst_n_tree));
 
-// Demultiplexed streams on the AFU side of the PF/VF MUX.
-// The port_afu_instances() module receives a flattened array
-// of ports, merging links and ports into a single dimension.
-pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_rx_a_if [TOTAL_PORTS-1:0](.clk(clk),.rst_n(port_rst_n_tree));
-pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_tx_a_if [TOTAL_PORTS-1:0](.clk(clk),.rst_n(port_rst_n_tree));
-pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_rx_b_if [TOTAL_PORTS-1:0](.clk(clk),.rst_n(port_rst_n_tree));
-pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_tx_b_if [TOTAL_PORTS-1:0](.clk(clk),.rst_n(port_rst_n_tree));
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+   // No PF/VF MUX. Pass the PF/VF tagged (multiplexed) TLP streams
+   // directly to the AFU.
+   pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_rx_a_if [PG_NUM_LINKS-1:0](.clk(clk),.rst_n(rst_n_tree));
+   pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_tx_a_if [PG_NUM_LINKS-1:0](.clk(clk),.rst_n(rst_n_tree));
+   pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_rx_b_if [PG_NUM_LINKS-1:0](.clk(clk),.rst_n(rst_n_tree));
+   pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_tx_b_if [PG_NUM_LINKS-1:0](.clk(clk),.rst_n(rst_n_tree));
 
+   // Port-level resets are still demultiplexed since they enter
+   // afu_main that way. Retain the doubly indexed arrays and pass
+   // it directly to port_afu_instances().
+   reg [PG_NUM_PORTS-1:0] port_rst_n_tree[PG_NUM_LINKS-1:0];
+`else
+   // Normal case:
+   //  Demultiplexed streams on the AFU side of the PF/VF MUX.
+   //  The port_afu_instances() module receives a flattened array
+   //  of ports, merging links and ports into a single dimension.
+
+   // Per-port resets
+   reg [TOTAL_PORTS-1:0] port_rst_n_tree;
+   pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_rx_a_if [TOTAL_PORTS-1:0](.clk(clk),.rst_n(port_rst_n_tree));
+   pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_tx_a_if [TOTAL_PORTS-1:0](.clk(clk),.rst_n(port_rst_n_tree));
+   pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_rx_b_if [TOTAL_PORTS-1:0](.clk(clk),.rst_n(port_rst_n_tree));
+   pcie_ss_axis_if #(.DATA_W (TDATA_WIDTH), .USER_W (TUSER_WIDTH)) port_tx_b_if [TOTAL_PORTS-1:0](.clk(clk),.rst_n(port_rst_n_tree));
+`endif
 
 // Linear mapping function from link/port to the array that
 // will reach port_afu_instances().
@@ -126,13 +152,14 @@ function automatic t_afu_prr_pf_vf_map gen_prr_pf_vf_map();
    t_afu_prr_pf_vf_map map;
    for (int link = 0; link < PG_NUM_LINKS; link = link + 1) begin
       for (int p = 0; p < PG_NUM_PORTS; p = p + 1) begin
+         map[link * PG_NUM_PORTS + p].link_num = link;
          map[link * PG_NUM_PORTS + p].pf_num = PORT_PF_VF_INFO[p].pf_num;
-         map[link * PG_NUM_PORTS + p].vf_num = PORT_PF_VF_INFO[p].vf_num;
          map[link * PG_NUM_PORTS + p].vf_active = PORT_PF_VF_INFO[p].vf_active;
          if (LINK_NUM_FROM_PORT_INFO)
-            map[link * PG_NUM_PORTS + p].link_num = PORT_PF_VF_INFO[p].link_num;
+            // ASE - unique VF numbers across all links
+            map[link * PG_NUM_PORTS + p].vf_num = PORT_PF_VF_INFO[p].vf_num + (link * PG_NUM_PORTS);
          else
-            map[link * PG_NUM_PORTS + p].link_num = link;
+            map[link * PG_NUM_PORTS + p].vf_num = PORT_PF_VF_INFO[p].vf_num;
       end
    end
    return map;
@@ -190,6 +217,21 @@ for (genvar j=0; j<PG_NUM_LINKS; j++) begin : PCIE_FREEZE_BRIDGE
 end // for: PCIE_FREEZE_BRIDGE
 
 
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+
+// No PF/VF MUX. Pass the multiplexed link streams directly to the AFU.
+generate
+   for (genvar link = 0; link < PG_NUM_LINKS; link = link + 1) begin: no_mux
+      ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_tx_a (.clk, .rst_n(rst_n_tree), .axis_s(port_tx_a_if[link]), .axis_m(afu_axi_tx_a_if_t1[link]));
+      ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_rx_a (.clk, .rst_n(rst_n_tree), .axis_s(afu_axi_rx_a_if_t1[link]), .axis_m(port_rx_a_if[link]));
+      ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_tx_b (.clk, .rst_n(rst_n_tree), .axis_s(port_tx_b_if[link]), .axis_m(afu_axi_tx_b_if_t1[link]));
+      ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_rx_b (.clk, .rst_n(rst_n_tree), .axis_s(afu_axi_rx_b_if_t1[link]), .axis_m(port_rx_b_if[link]));
+   end
+endgenerate
+
+`else
+
+// Normal AFU -- add PF/VF MUX to map links to individual ports
 generate
    for (genvar link = 0; link < PG_NUM_LINKS; link = link + 1) begin: mux
       // Build a separate PF/VF MUX for each PCIe link.
@@ -253,13 +295,20 @@ generate
    end // block: mux
 endgenerate
 
+`endif
+
+
 // ======================================================
 // Instantiate AFUs
 // ======================================================
 
 port_afu_instances #(
-   .PG_NUM_PORTS    (TOTAL_PORTS),
-   .PORT_PF_VF_INFO (TOTAL_PORT_PF_VF_INFO),
+   .PG_NUM_LINKS    (PG_NUM_LINKS),
+   .PG_NUM_PORTS    (IS_MULTIPLEXED ? PG_NUM_PORTS : TOTAL_PORTS),
+   .PORT_PF_VF_INFO (IS_MULTIPLEXED ? PORT_PF_VF_INFO : TOTAL_PORT_PF_VF_INFO),
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+   .LINK_NUM_FROM_PORT_INFO(LINK_NUM_FROM_PORT_INFO),
+`endif
    .NUM_MEM_CH      (NUM_MEM_CH),
    .MAX_ETH_CH      (MAX_ETH_CH)
 ) port_afu_instances (
@@ -294,18 +343,24 @@ always_ff @(posedge clk) begin
    rst_n_q1        <= rst_n;
 end
 
-// Map incoming port-level resets to the same order as the
-// flattend port vectors port_rx_a_if, etc.
+// Add fanout to port-level resets
 generate
    for (genvar link = 0; link < PG_NUM_LINKS; link = link + 1) begin: rst_link
       for (genvar p = 0; p < PG_NUM_PORTS; p = p + 1) begin: rst_p
-         localparam c = linearLinkPort(link, p);
-
-         always @(posedge clk) port_rst_n_q1[c] <= port_rst_n[link][p];
-         always @(posedge clk) port_rst_n_q2[c] <= port_rst_n_q1[c] && rst_n_q1;
+         always @(posedge clk) port_rst_n_q1[link][p] <= port_rst_n[link];
+         always @(posedge clk) port_rst_n_q2[link][p] <= port_rst_n_q1[link][p] && rst_n_q1;
 
          // Multi-cycle duplication tree
-         fim_dup_tree dup_port_rst(.clk, .din(port_rst_n_q2[c]), .dout(port_rst_n_tree[c]));
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+         // No PF/VF MUX - resets remain indexed by link then port
+         fim_dup_tree dup_port_rst(.clk, .din(port_rst_n_q2[link][p]), .dout(port_rst_n_tree[link][p]));
+`else
+         // With PF/VF MUX - lap incoming port-level resets to the
+         // same order as the flattend port vectors port_rx_a_if, etc.
+         localparam c = linearLinkPort(link, p);
+
+         fim_dup_tree dup_port_rst(.clk, .din(port_rst_n_q2[link][p]), .dout(port_rst_n_tree[c]));
+`endif
       end
    end
 endgenerate

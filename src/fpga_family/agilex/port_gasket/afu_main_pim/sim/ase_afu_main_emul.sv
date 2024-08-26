@@ -39,36 +39,28 @@ module ase_afu_main_emul
     //
     // ====================================================================
 
-    // ASE currently supports only one link, independent of the emulated
-    // platform. On multi-link platforms, ASE represents the full array
-    // of ports as independent VF numbers. VF numbering in ASE does not
-    // match VF numbering in Quartus builds.
-    localparam PG_NUM_LINKS = 1;
-
 `ifdef OFS_FIM_IP_CFG_PCIE_SS_NUM_LINKS
     // Actual number of PCIe links on the platform
-    localparam PLATFORM_NUM_LINKS = `OFS_FIM_IP_CFG_PCIE_SS_NUM_LINKS;
+    localparam NUM_LINKS = `OFS_FIM_IP_CFG_PCIE_SS_NUM_LINKS;
 `else
-    localparam PLATFORM_NUM_LINKS = 1;
+    localparam NUM_LINKS = 1;
 `endif
+
+    // Incoming PG_NUM_PORTS is across all links. Convert to ports per link.
+    localparam NUM_PORTS = PG_NUM_PORTS / NUM_LINKS;
 
     // Map the PF/VF association of AFU ports to the parameters that will be
     // passed to the port gasket.
-    typedef pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] t_afu_pf_vf_info;
+    typedef pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[NUM_PORTS-1:0] t_afu_pf_vf_info;
     function automatic t_afu_pf_vf_info gen_afu_pf_vf_info();
         t_afu_pf_vf_info info;
 
         // For simulation, we just pick a collection of VFs associated with a PF.
-        for (int p = 0; p < PG_NUM_PORTS; p = p + 1) begin
+        for (int p = 0; p < NUM_PORTS; p = p + 1) begin
             info[p].pf_num = 0;
             info[p].vf_num = p;
             info[p].vf_active = 1'b1;
-            // Despite ASE not supporting multiple links and requiring
-            // unique vf_nums for each port, map ports to the link numbers
-            // that would be used on the platform. This way, AFUs that
-            // walk the ports looking for link numbers will get the same
-            // result in ASE.
-            info[p].link_num = p / (PG_NUM_PORTS / PLATFORM_NUM_LINKS);
+            info[p].link_num = 0;
         end
 
         return info;
@@ -76,12 +68,12 @@ module ase_afu_main_emul
 
     localparam t_afu_pf_vf_info PORT_PF_VF_INFO = gen_afu_pf_vf_info();
 
-    typedef pf_vf_mux_pkg::t_pfvf_rtable_entry[PG_NUM_PORTS-1:0] t_afu_pf_vf_rtable;
+    typedef pf_vf_mux_pkg::t_pfvf_rtable_entry[NUM_PORTS-1:0] t_afu_pf_vf_rtable;
     function automatic t_afu_pf_vf_rtable gen_afu_pf_vf_rtable();
         t_afu_pf_vf_rtable rtable;
 
         // For simulation, we just pick a collection of VFs associated with a PF.
-        for (int p = 0; p < PG_NUM_PORTS; p = p + 1) begin
+        for (int p = 0; p < NUM_PORTS; p = p + 1) begin
             rtable[p].pfvf_port = p;
             rtable[p].pf = 0;
             rtable[p].vf = p;
@@ -92,6 +84,94 @@ module ase_afu_main_emul
     endfunction // gen_afu_pf_vf_rtable
 
     parameter t_afu_pf_vf_rtable PG_PFVF_ROUTING_TABLE = gen_afu_pf_vf_rtable();
+
+    localparam TDATA_WIDTH = pcie_ss_axis_pkg::TDATA_WIDTH;
+    localparam TUSER_WIDTH = pcie_ss_axis_pkg::TUSER_WIDTH;
+
+    logic [NUM_PORTS-1:0] port_rst_n[NUM_LINKS-1:0];
+    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) link_tx_a_if [NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
+    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) link_rx_a_if [NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
+    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) link_tx_b_if [NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
+    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) link_rx_b_if [NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
+
+    for (genvar link = 0; link < NUM_LINKS; link = link + 1) begin: rst_link
+        for (genvar p = 0; p < NUM_PORTS; p = p + 1) begin: rst_p
+            assign port_rst_n[link][p] = ~softReset;
+        end
+    end
+
+    if (NUM_LINKS == 1) begin : l1
+        // One link. Connect the ASE PCIe SS emulation ports directly to afu_main().
+        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_tx_a (.clk(pClk), .rst_n(~softReset), .axis_s(link_tx_a_if[0]), .axis_m(afu_axi_tx_a_if));
+        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_rx_a (.clk(pClk), .rst_n(~softReset), .axis_s(afu_axi_rx_a_if), .axis_m(link_rx_a_if[0]));
+        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_tx_b (.clk(pClk), .rst_n(~softReset), .axis_s(link_tx_b_if[0]), .axis_m(afu_axi_tx_b_if));
+        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_rx_b (.clk(pClk), .rst_n(~softReset), .axis_s(afu_axi_rx_b_if), .axis_m(link_rx_b_if[0]));
+    end
+    else begin : l
+        // Multiple links. ASE emulation only supports one stream. Add a PF/VF MUX
+        // to the simulation path to split the single ASE stream into what looks
+        // like multiple links.
+
+        localparam LINK_EMUL_NUM_RTABLE_ENTRIES = NUM_LINKS * NUM_PORTS;
+
+        typedef pf_vf_mux_pkg::t_pfvf_rtable_entry[LINK_EMUL_NUM_RTABLE_ENTRIES-1:0]
+            t_ase_link_emul_rtable;
+
+        function automatic t_ase_link_emul_rtable gen_ase_link_emul_rtable();
+            t_ase_link_emul_rtable rtable;
+
+            // Use a unique VF for every port, even across emulated links. ASE
+            // only emulates a single link and PF.
+            for (int p = 0; p < LINK_EMUL_NUM_RTABLE_ENTRIES; p = p + 1) begin
+                rtable[p].pfvf_port = p / NUM_PORTS;
+                rtable[p].pf = 0;
+                rtable[p].vf = p;
+                rtable[p].vf_active = 1'b1;
+            end
+
+            return rtable;
+        endfunction // gen_ase_link_emul_rtable
+
+        parameter t_ase_link_emul_rtable LINK_EMUL_PFVF_ROUTING_TABLE = gen_ase_link_emul_rtable();
+
+        pf_vf_mux_w_params
+          #(
+            .MUX_NAME("ASE_LINK_EMUL_A"),
+            .NUM_PORT(NUM_LINKS),
+            .NUM_RTABLE_ENTRIES(LINK_EMUL_NUM_RTABLE_ENTRIES),
+            .PFVF_ROUTING_TABLE(LINK_EMUL_PFVF_ROUTING_TABLE)
+            )
+          ase_link_emul_mux_a
+           (
+            .clk(pClk),
+            .rst_n(~softReset),
+            .ho2mx_rx_port(afu_axi_rx_a_if),
+            .mx2ho_tx_port(afu_axi_tx_a_if),
+            .mx2fn_rx_port(link_rx_a_if),
+            .fn2mx_tx_port(link_tx_a_if),
+            .out_fifo_err(),
+            .out_fifo_perr()
+            );
+
+        pf_vf_mux_w_params
+          #(
+            .MUX_NAME("ASE_LINK_EMUL_B"),
+            .NUM_PORT(NUM_LINKS),
+            .NUM_RTABLE_ENTRIES(LINK_EMUL_NUM_RTABLE_ENTRIES),
+            .PFVF_ROUTING_TABLE(LINK_EMUL_PFVF_ROUTING_TABLE)
+            )
+          ase_link_emul_mux_b
+           (
+            .clk(pClk),
+            .rst_n(~softReset),
+            .ho2mx_rx_port(afu_axi_rx_b_if),
+            .mx2ho_tx_port(afu_axi_tx_b_if),
+            .mx2fn_rx_port(link_rx_b_if),
+            .fn2mx_tx_port(link_tx_b_if),
+            .out_fifo_err(),
+            .out_fifo_perr()
+            );
+    end
 
 
     // ====================================================================
@@ -267,32 +347,14 @@ module ase_afu_main_emul
     //
     // ====================================================================
 
-    localparam TDATA_WIDTH = pcie_ss_axis_pkg::TDATA_WIDTH;
-    localparam TUSER_WIDTH = pcie_ss_axis_pkg::TUSER_WIDTH;
-
-    logic [PG_NUM_PORTS-1:0] port_rst_n[PG_NUM_LINKS-1:0];
-    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) link_tx_a_if [PG_NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
-    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) link_rx_a_if [PG_NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
-    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) link_tx_b_if [PG_NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
-    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) link_rx_b_if [PG_NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
-
-    for (genvar link = 0; link < PG_NUM_LINKS; link = link + 1) begin: rst_link
-        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_tx_a (.clk(pClk), .rst_n(~softReset), .axis_s(link_tx_a_if[link]), .axis_m(afu_axi_tx_a_if));
-        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_rx_a (.clk(pClk), .rst_n(~softReset), .axis_s(afu_axi_rx_a_if), .axis_m(link_rx_a_if[link]));
-        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_tx_b (.clk(pClk), .rst_n(~softReset), .axis_s(link_tx_b_if[link]), .axis_m(afu_axi_tx_b_if));
-        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_rx_b (.clk(pClk), .rst_n(~softReset), .axis_s(afu_axi_rx_b_if), .axis_m(link_rx_b_if[link]));
-        for (genvar p = 0; p < PG_NUM_PORTS; p = p + 1) begin: rst_p
-            assign port_rst_n[link][p] = ~softReset;
-        end
-    end
-
     afu_main #(
-        .PG_NUM_PORTS(PG_NUM_PORTS),
+        .PG_NUM_LINKS(NUM_LINKS),
+        .PG_NUM_PORTS(NUM_PORTS),
         .PORT_PF_VF_INFO(PORT_PF_VF_INFO),
         .NUM_MEM_CH(NUM_LOCAL_MEM_BANKS),
         .MAX_ETH_CH(NUM_ETH_CH),
 
-        .PG_NUM_RTABLE_ENTRIES(PG_NUM_PORTS),
+        .PG_NUM_RTABLE_ENTRIES(NUM_PORTS),
         .PG_PFVF_ROUTING_TABLE(PG_PFVF_ROUTING_TABLE),
         .LINK_NUM_FROM_PORT_INFO(1)
       ) afu_main (

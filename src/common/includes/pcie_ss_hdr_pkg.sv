@@ -199,11 +199,45 @@ typedef logic [2:0]  ReqHdr_pf_num_t;
 
 // Full PF/VF port info, can be passed as a parameter to configure AFUs
 typedef struct packed {
-    ReqHdr_pf_num_t     pf_num;
+    int                 link_num;
+    // *** These final three fields are ordered so that truncating
+    // *** ReqHdr_pf_vf_info_t yields ReqHdr_pf_vf_id_t.
     ReqHdr_vf_num_t     vf_num;
     logic               vf_active;
-    int                 link_num;
+    ReqHdr_pf_num_t     pf_num;
 } ReqHdr_pf_vf_info_t;
+
+function automatic ReqHdr_pf_vf_info_t init_ReqHdr_pf_vf_info(int link_num,
+                                                              ReqHdr_vf_num_t vf_num,
+                                                              logic vf_active,
+                                                              ReqHdr_pf_num_t pf_num);
+    ReqHdr_pf_vf_info_t pfvf;
+    pfvf.link_num = link_num;
+    pfvf.vf_num = vf_num;
+    pfvf.vf_active = vf_active;
+    pfvf.pf_num = pf_num;
+    return pfvf;
+endfunction
+
+
+// Encoded PF/VF info in the order expected by the PCIe SS for mapping
+// requester and completer IDs.
+typedef struct packed {
+    ReqHdr_vf_num_t     vf_num;
+    logic               vf_active;
+    ReqHdr_pf_num_t     pf_num;
+} ReqHdr_pf_vf_id_t;
+
+function automatic ReqHdr_pf_vf_id_t init_ReqHdr_pf_vf_id(ReqHdr_vf_num_t vf_num,
+                                                          logic vf_active,
+                                                          ReqHdr_pf_num_t pf_num);
+    ReqHdr_pf_vf_id_t pfvf;
+    pfvf.vf_num = vf_num;
+    pfvf.vf_active = vf_active;
+    pfvf.pf_num = pf_num;
+    return pfvf;
+endfunction
+
 
 // ---------------------------------------------------------------------------
 //          PCIe Power User Header  

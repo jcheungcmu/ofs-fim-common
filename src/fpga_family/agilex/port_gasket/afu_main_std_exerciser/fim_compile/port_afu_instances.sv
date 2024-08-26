@@ -24,6 +24,7 @@ module port_afu_instances
    import pcie_ss_axis_pkg::*;
    import he_lb_pkg::*;
 # (
+   parameter PG_NUM_LINKS    = 1,
    parameter PG_NUM_PORTS    = 1,
    parameter pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] PORT_PF_VF_INFO =
                 {PG_NUM_PORTS{pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t'(0)}},

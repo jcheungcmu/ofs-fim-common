@@ -28,13 +28,33 @@ import top_cfg_pkg::*;
 `ifndef AFU_TOP_REQUIRES_AFU_MAIN_IF
 
 module port_afu_instances # (
+   parameter PG_NUM_LINKS    = 1,
    parameter PG_NUM_PORTS    = 1,
    // PF/VF to which each port is mapped
    parameter pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] PORT_PF_VF_INFO =
                 {PG_NUM_PORTS{pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t'(0)}},
 
    parameter NUM_MEM_CH      = 0,
-   parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS
+   parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS,
+
+   // Used in simulation by ASE to emulate multiple links. ASE PCIe emulation
+   // supports only one link. The multi-link ASE environment adds an extra PF/VF
+   // MUX before afu_main() and requires unique VFs across all links.
+   // The parameter is relevant only in multiplexed channel mode, since PF/VF
+   // MUXing is complete already in normal mode before reaching
+   // port_afu_instances.
+   parameter LINK_NUM_FROM_PORT_INFO = 0,
+
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+   // When PCIe is multiplexed here, the incoming channels are
+   // grouped by PCIe links. PF/VF tagged streams remain multiplexed
+   // within each link.
+   parameter NUM_PCIE_STREAMS = PG_NUM_LINKS
+`else
+   // PF/VF MUX in afu_main() splits all links/PFs/VFs into
+   // individual streams and maps them to a linear collection of ports.
+   parameter NUM_PCIE_STREAMS = PG_NUM_PORTS
+`endif
 )(
    input  logic clk,
    input  logic clk_div2,
@@ -44,18 +64,24 @@ module port_afu_instances # (
 
    input  logic rst_n,
    // Both soft reset and global rst_n trigger port_rst_n
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+   // PCIe streams remain mulitplexed -- resets are grouped by PCIe links
+   input  logic [PG_NUM_PORTS-1:0] port_rst_n[PG_NUM_LINKS-1:0],
+`else
+   // Demultiplexed array across link/PF/VF
    input  logic [PG_NUM_PORTS-1:0] port_rst_n,
+`endif
 
    // PCIe A ports are the standard TLP channels. All host responses
    // arrive on the RX A port.
-   pcie_ss_axis_if.source        afu_axi_tx_a_if [PG_NUM_PORTS-1:0],
-   pcie_ss_axis_if.sink          afu_axi_rx_a_if [PG_NUM_PORTS-1:0],
+   pcie_ss_axis_if.source        afu_axi_tx_a_if [NUM_PCIE_STREAMS-1:0],
+   pcie_ss_axis_if.sink          afu_axi_rx_a_if [NUM_PCIE_STREAMS-1:0],
    // PCIe B ports are a second channel on which reads and interrupts
    // may be sent from the AFU. To improve throughput, reads on B may flow
    // around writes on A through PF/VF MUX trees until writes are committed
    // to the PCIe subsystem. AFUs may tie off the B port and send all
    // messages to A.
-   pcie_ss_axis_if.source        afu_axi_tx_b_if [PG_NUM_PORTS-1:0],
+   pcie_ss_axis_if.source        afu_axi_tx_b_if [NUM_PCIE_STREAMS-1:0],
    // Write commits are signaled here on the RX B port, indicating the
    // point at which the A and B channels become ordered within the FIM.
    // Commits are signaled after tlast of a write on TX A, after arbitration
@@ -63,7 +89,7 @@ module port_afu_instances # (
    // returning the tag value from the write request. AFUs that do not
    // need local write commits may ignore this port, but must set
    // tready to 1.
-   pcie_ss_axis_if.sink          afu_axi_rx_b_if [PG_NUM_PORTS-1:0]
+   pcie_ss_axis_if.sink          afu_axi_rx_b_if [NUM_PCIE_STREAMS-1:0]
 
    `ifdef INCLUDE_LOCAL_MEM
       // Local memory
@@ -89,10 +115,26 @@ module port_afu_instances # (
 // wraps all ports to the AFU.
 ofs_plat_if#(.ENABLE_LOG(1)) plat_ifc();
 
+// Vector of PCIe port resets. When ports are multiplexed, these
+// will be cold and PR reset. When ports are already demultiplexed,
+// these will include function level reset.
+logic [NUM_PCIE_STREAMS-1:0] pcie_stream_rst_n;
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+    for (genvar p = 0; p < NUM_PCIE_STREAMS; p = p + 1) begin : r
+        assign pcie_stream_rst_n[p] = afu_axi_tx_a_if[p].rst_n;
+    end
+`else
+    assign pcie_stream_rst_n = port_rst_n;
+`endif
+
 // Clocks
 ofs_plat_std_clocks_gen_port_resets clocks (
    .pClk(clk),
-   .pClk_reset_n(port_rst_n),
+   .pClk_reset_n(pcie_stream_rst_n),
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+   // Pass resets with and without function level reset
+   .pClk_demux_reset_n(port_rst_n),
+`endif
    .pClkDiv2(clk_div2),
    .pClkDiv4(clk_div4),
    .uClk_usr(uclk_usr),
@@ -114,28 +156,45 @@ assign plat_ifc.pwrState = 1'b0;
 //----------------------------------------------
 
 generate
-   for (genvar p = 0; p < PG_NUM_PORTS; p = p + 1)
+   for (genvar s = 0; s < NUM_PCIE_STREAMS; s = s + 1)
    begin : hc
+       function automatic pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] gen_link_pf_vf_info();
+           pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] pfvf = PORT_PF_VF_INFO;
+
+           if (LINK_NUM_FROM_PORT_INFO) begin
+               for (int p = 0; p < PG_NUM_PORTS; p = p + 1)
+                   pfvf[p].vf_num = pfvf[p].vf_num + (s * PG_NUM_PORTS);
+           end
+
+           return pfvf;
+       endfunction // gen_link_pf_vf_info
+
+       localparam pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] LINK_PORT_PF_VF_INFO =
+           gen_link_pf_vf_info();
+
       // Map the PIM's host_chan interface to the FIM's PCIe SS interface.
       map_fim_pcie_ss_to_pim_host_chan
         #(
-          .INSTANCE_NUMBER(p),
-
-          .PF_NUM(PORT_PF_VF_INFO[p].pf_num),
-          .VF_NUM(PORT_PF_VF_INFO[p].vf_num),
-          .VF_ACTIVE(PORT_PF_VF_INFO[p].vf_active)
+          .INSTANCE_NUMBER(s),
+`ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
+          .PORT_PF_VF_INFO(LINK_PORT_PF_VF_INFO)
+`else
+          .PF_NUM(PORT_PF_VF_INFO[s].pf_num),
+          .VF_NUM(PORT_PF_VF_INFO[s].vf_num),
+          .VF_ACTIVE(PORT_PF_VF_INFO[s].vf_active)
+`endif
           )
        map_host_chan
          (
           .clk(plat_ifc.clocks.pClk.clk),
-          .reset_n(port_rst_n[p]),
+          .reset_n(pcie_stream_rst_n[s]),
 
-          .pcie_ss_tx_a_st(afu_axi_tx_a_if[p]),
-          .pcie_ss_tx_b_st(afu_axi_tx_b_if[p]),
-          .pcie_ss_rx_a_st(afu_axi_rx_a_if[p]),
-          .pcie_ss_rx_b_st(afu_axi_rx_b_if[p]),
+          .pcie_ss_tx_a_st(afu_axi_tx_a_if[s]),
+          .pcie_ss_tx_b_st(afu_axi_tx_b_if[s]),
+          .pcie_ss_rx_a_st(afu_axi_rx_a_if[s]),
+          .pcie_ss_rx_b_st(afu_axi_rx_b_if[s]),
 
-          .port(plat_ifc.host_chan.ports[p])
+          .port(plat_ifc.host_chan.ports[s])
           );
    end
 endgenerate
