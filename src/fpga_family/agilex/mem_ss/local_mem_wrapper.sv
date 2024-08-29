@@ -32,6 +32,7 @@ module local_mem_wrapper
 `ifdef INCLUDE_HBM
    input       uib_refclk      [NUM_HBM_DEVICES-1:0],
    input       fab_clk         [NUM_HBM_DEVICES-1:0],
+   input       fab_clk_wr      [NUM_HBM_DEVICES-1:0],
    input       noc_ctrl_refclk [NUM_HBM_DEVICES-1:0],
 
    input       hbm_cattrip     [NUM_HBM_DEVICES-1:0],

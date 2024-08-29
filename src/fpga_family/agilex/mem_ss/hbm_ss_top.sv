@@ -24,6 +24,7 @@ module hbm_ss_top
 
    input       uib_refclk      [NUM_HBM_DEVICES-1:0],
    input       fab_clk         [NUM_HBM_DEVICES-1:0],
+   input       fab_clk_wr      [NUM_HBM_DEVICES-1:0],
    input       noc_ctrl_refclk [NUM_HBM_DEVICES-1:0],
 
    input       hbm_cattrip [NUM_HBM_DEVICES-1:0],
@@ -232,6 +233,7 @@ endgenerate
 
    // HBM/NoC signals
    logic        hbm_0_fab_clk_clk, hbm_1_fab_clk_clk;
+   logic        noc_0_noc_bridge_fabric_clk_clk, noc_1_noc_bridge_fabric_clk_clk;
    logic        hbm_0_rst_n_reset_n, hbm_1_rst_n_reset_n;
    logic        hbm_0_cattrip_conduit, hbm_1_cattrip_conduit;
    logic [2:0]  hbm_0_temp_conduit, hbm_1_temp_conduit;
@@ -243,6 +245,7 @@ endgenerate
 generate
    always_comb begin
       hbm_0_fab_clk_clk     = fab_clk[0];
+      noc_0_noc_bridge_fabric_clk_clk = fab_clk_wr[0];
       hbm_0_rst_n_reset_n   = ~reset;
       hbm_0_cattrip_conduit = hbm_cattrip[0];
       hbm_0_temp_conduit    = hbm_temp[0];
@@ -255,6 +258,7 @@ generate
 if(NUM_HBM_DEVICES > 1) begin : hbm_1
    always_comb begin
       hbm_1_fab_clk_clk     = fab_clk[1];
+      noc_1_noc_bridge_fabric_clk_clk = fab_clk_wr[1];
       hbm_1_rst_n_reset_n   = ~reset;
       hbm_1_cattrip_conduit = hbm_cattrip[1];
       hbm_1_temp_conduit    = hbm_temp[1];
