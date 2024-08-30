@@ -100,6 +100,26 @@ module ase_afu_main_emul
         end
     end
 
+    localparam LINK_EMUL_NUM_RTABLE_ENTRIES = NUM_LINKS * NUM_PORTS;
+
+    typedef pf_vf_mux_pkg::t_pfvf_rtable_entry[LINK_EMUL_NUM_RTABLE_ENTRIES-1:0]
+        t_ase_link_emul_rtable;
+
+    function automatic t_ase_link_emul_rtable gen_ase_link_emul_rtable();
+        t_ase_link_emul_rtable rtable;
+
+        // Use a unique VF for every port, even across emulated links. ASE
+        // only emulates a single link and PF.
+        for (int p = 0; p < LINK_EMUL_NUM_RTABLE_ENTRIES; p = p + 1) begin
+            rtable[p].pfvf_port = p / NUM_PORTS;
+            rtable[p].pf = 0;
+            rtable[p].vf = p;
+            rtable[p].vf_active = 1'b1;
+        end
+
+        return rtable;
+    endfunction // gen_ase_link_emul_rtable
+
     if (NUM_LINKS == 1) begin : l1
         // One link. Connect the ASE PCIe SS emulation ports directly to afu_main().
         ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn_tx_a (.clk(pClk), .rst_n(~softReset), .axis_s(link_tx_a_if[0]), .axis_m(afu_axi_tx_a_if));
@@ -111,26 +131,6 @@ module ase_afu_main_emul
         // Multiple links. ASE emulation only supports one stream. Add a PF/VF MUX
         // to the simulation path to split the single ASE stream into what looks
         // like multiple links.
-
-        localparam LINK_EMUL_NUM_RTABLE_ENTRIES = NUM_LINKS * NUM_PORTS;
-
-        typedef pf_vf_mux_pkg::t_pfvf_rtable_entry[LINK_EMUL_NUM_RTABLE_ENTRIES-1:0]
-            t_ase_link_emul_rtable;
-
-        function automatic t_ase_link_emul_rtable gen_ase_link_emul_rtable();
-            t_ase_link_emul_rtable rtable;
-
-            // Use a unique VF for every port, even across emulated links. ASE
-            // only emulates a single link and PF.
-            for (int p = 0; p < LINK_EMUL_NUM_RTABLE_ENTRIES; p = p + 1) begin
-                rtable[p].pfvf_port = p / NUM_PORTS;
-                rtable[p].pf = 0;
-                rtable[p].vf = p;
-                rtable[p].vf_active = 1'b1;
-            end
-
-            return rtable;
-        endfunction // gen_ase_link_emul_rtable
 
         parameter t_ase_link_emul_rtable LINK_EMUL_PFVF_ROUTING_TABLE = gen_ase_link_emul_rtable();
 

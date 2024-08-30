@@ -155,22 +155,22 @@ assign plat_ifc.pwrState = 1'b0;
 // AXI-S PCIe channels
 //----------------------------------------------
 
+function automatic pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] gen_link_pf_vf_info(int stream_num);
+    pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] pfvf = PORT_PF_VF_INFO;
+
+    if (LINK_NUM_FROM_PORT_INFO) begin
+        for (int p = 0; p < PG_NUM_PORTS; p = p + 1)
+            pfvf[p].vf_num = pfvf[p].vf_num + (stream_num * PG_NUM_PORTS);
+    end
+
+    return pfvf;
+endfunction // gen_link_pf_vf_info
+
 generate
    for (genvar s = 0; s < NUM_PCIE_STREAMS; s = s + 1)
    begin : hc
-       function automatic pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] gen_link_pf_vf_info();
-           pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] pfvf = PORT_PF_VF_INFO;
-
-           if (LINK_NUM_FROM_PORT_INFO) begin
-               for (int p = 0; p < PG_NUM_PORTS; p = p + 1)
-                   pfvf[p].vf_num = pfvf[p].vf_num + (s * PG_NUM_PORTS);
-           end
-
-           return pfvf;
-       endfunction // gen_link_pf_vf_info
-
        localparam pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t[PG_NUM_PORTS-1:0] LINK_PORT_PF_VF_INFO =
-           gen_link_pf_vf_info();
+           gen_link_pf_vf_info(s);
 
       // Map the PIM's host_chan interface to the FIM's PCIe SS interface.
       map_fim_pcie_ss_to_pim_host_chan
