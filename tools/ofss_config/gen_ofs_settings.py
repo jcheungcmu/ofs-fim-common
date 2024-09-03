@@ -13,6 +13,7 @@ from iopll_ip import IOPLL as IOPLL
 from memory_ip import Memory as Memory, SimMemory as SimMemory
 import ofs_parser
 from pcie_ip import PCIe as PCIe
+from project import Project as Project
 
 
 def configure_logging():
@@ -100,6 +101,7 @@ def main():
             pass
 
     ofs_ip_configurations = ofs_parser.process_ofss_configs(args.ofss)
+    proj_config = Project(ofs_ip_configurations["ofs"][0], args.target)
     ips_to_config = instantiate_ips(ofs_ip_configurations, args.target)
 
     for ip, ip_configurations in ofs_ip_configurations.items():
@@ -110,6 +112,9 @@ def main():
     logging.info("=============================================")
     logging.info("Beginning OFS IP Configuration Tool")
     logging.info("=============================================")
+
+    proj_config.summarize_configuration()
+    proj_config.deploy()
 
     updated_ip_files = []
     for ip in ips_to_config:
