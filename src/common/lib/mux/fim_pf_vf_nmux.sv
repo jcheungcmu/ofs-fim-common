@@ -86,150 +86,169 @@
 //         
 // 
 //        
-module fim_pf_vf_nmux
-     #(parameter                        WIDTH   = 128                         ,// width of the input port
-                                        DEPTH   = 1                           ,// depth of the output fifo = 2**DEPTH
-                                        REG_OUT = 0                           ,// extra output register stages?
-                                        N       = 4                          ) // number of mux input ports
-      (                                                                        //  
-      input      [N-1:0][WIDTH-1:0]     mux_in_data                           ,// Mux in data
-      input      [N-1:0]                mux_in_sop                            ,// Mux in start of packet
-      input      [N-1:0]                mux_in_eop                            ,// Mux in end of packet
-      input      [N-1:0]                mux_in_valid                          ,// Mux in data valid
-      input                             mux_out_ready                         ,// output ready from next stage logic
-      input                             rst_n                                 ,// reset low active
-      input                             clk                                   ,//
-                                                                               //
-      output logic [N-1:0]              mux_in_ready                          ,// mux_in_valid & mux_in_ready indicates data is transferred to output
-      output logic [WIDTH-1:0]          mux_out_data                          ,// Mux out data
-      output logic                      mux_out_valid                         ,// Mux out data valid
-      output logic                      out_q_err                             ,// Mux out fifo error
-      output logic                      out_q_perr                             // Mux out fifo ram parity error
-      );                                                                       //
-      parameter                         M =(N==1)? 1 : $clog2(N)              ;// determine array index size. 
-      logic      [M-1:0]                select                                ;// round robin mux select
-      logic      [M-1:0]                select_q                              ;// registered select (current selected port)
-      logic                             select_en                             ;// update mux select from round robin search 
-      logic      [N-1:0]                bit_vector                            ;// bit_vector = mux_in_valid & (bandwidth_counter > 0)
-      logic      [N-1:0]                bit_rotate                            ;// round robin rotated version of bit_vector
-      logic                             mux_in_sop_or                         ;// OR of all mux in sop except for the current selected port
-      logic      [WIDTH-1:0]            out_q_din                             ;// out_q(fifo) data in
-      logic                             out_q_wen                             ;// out_q(fifo) write enable strobe
-      logic                             out_q_ren                             ;// out_q(fifo) read enable strobe
-      logic                             out_q_ready                           ;// out_q(fifo) is ready
-      integer                           i , j                                 ;// index
-                                                                               //
-      always @(*) begin                                                        //
-                               mux_in_sop_or = 0                              ;//
-          for (i=0; i<N; i++)                                                  //
-              if (i!=select_q) mux_in_sop_or = mux_in_sop_or | mux_in_sop[i]  ;// OR of all mux_in_sop except for current selected mux port
-                                                                               //
-          for (i=0; i<N; i++)                                                  //
-               bit_vector[i]=  mux_in_valid[i]                                ;// bit_vector represents mux_in_valid AND bandwidth_count > 0 
-               bit_rotate   =  bit_vector >> select_q                          //
-                            |  bit_vector <<(N-select_q)                      ;// rotate higest port to least priority (round robin priority)
-                                                                               //
-                                                    select = select_q         ;//
-               for (i=0; i<N; i++)                                             //
-                    if (bit_rotate[i])                                         //
-                        select = (select_q+i+1)>N ? select_q + i - N           // select = highest priority port on the rotated mux_in_valid  
-                                                  : select_q + i              ;//
-                                                                               //
-               mux_in_ready           = 0                                     ;//
-               mux_in_ready[select_q] = out_q_ready                           ;// indicates arbitration accepted input port data
-                                                                               //
-               out_q_din    = mux_in_data  [select_q]                         ;// if mux pipe reg is instantiated connect fifo to pipe out        
-               out_q_wen    = mux_in_ready [select_q]                          //
-                            & mux_in_valid [select_q]                         ;// output fifo write enable = in_ready &  in_valid
-               out_q_ren    = mux_out_ready           & mux_out_valid         ;// output fifo read enable = out_ready & out_valid
-      end                                                                      //
-                                                                               //
-      always @(posedge clk) begin                                              //
-                                                                               //
-          if (select_en) select_q <= select                                   ;// update select if enabled; else hold
-                                                                               //
-          if ( mux_in_ready[select_q])   begin                                 // if current selected mux port ready is asserted
-             if (mux_in_sop[select_q] &  select_en    ) select_en <= 0        ;// check if it is a start of packet, if so disable switching to prevent mux
-             if (mux_in_sop[select_q] &  select_en    ) select_q  <= select_q ;// port change during a xfer.  hold select_q throughout the xfer.
-             if (mux_in_eop[select_q] &  mux_in_sop_or) select_q  <= select   ;// packet is completing and there are other xfer requests.  swithc to new owner
-             if (mux_in_eop[select_q] & !mux_in_sop_or) select_en <= 1        ;// if no other requests, reenable mux switching
-          end                                                                  //
-                                                                               //
-          if (!rst_n)   begin                                                  // reset low active
-              select_q        <=  0                                           ;//
-              select_en       <=  1                                           ;//
-          end                                                                  //
-      end                                                                      //
-                                                                               //
-      if (DEPTH <= 1) begin : p
-          //
-          // Requested depth is equivalent to a 2 stage skid buffer. Use
-          // that simpler primitive instead.
-          //
-          ofs_fim_axis_register  #(
-                   .ENABLE_TKEEP    (       0            ),
-                   .ENABLE_TLAST    (       0            ),
-                   .TDATA_WIDTH     (     WIDTH          ),
-                   .REG_IN          (     REG_OUT        )
-                   )
-              out_q
-                   (
-                    .clk,
-                    .rst_n,
+module fim_pf_vf_nmux #(
+    parameter WIDTH      = 128,         // width of the input port
+    parameter DEPTH      = 1,           // depth of the output fifo = 2**DEPTH
+    parameter REG_OUT    = 0,           // extra output register stages?
+    parameter N          = 4            // number of mux input ports
+    )
+   (
+    input  [N-1:0][WIDTH-1:0]     mux_in_data,              // Mux in data
+    input  [N-1:0]                mux_in_sop,               // Mux in start of packet
+    input  [N-1:0]                mux_in_eop,               // Mux in end of packet
+    input  [N-1:0]                mux_in_valid,             // Mux in data valid
+    input                         mux_out_ready,            // output ready from next stage logic
+    input                         rst_n,                    // reset low active
+    input                         clk,                      //
 
-                    .s_tready       (  out_q_ready       ),
-                    .s_tvalid       (  mux_in_valid[select_q] ),
-                    .s_tdata        (  out_q_din         ),
-                    .s_tkeep        (  '0                ),
-                    .s_tlast        (  '0                ),
-                    .s_tid          (  '0                ),
-                    .s_tdest        (  '0                ),
-                    .s_tuser        (  '0                ),
+    output logic [N-1:0]          mux_in_ready,             // mux_in_valid & mux_in_ready indicates data is transferred to output
+    output logic [WIDTH-1:0]      mux_out_data,             // Mux out data
+    output logic                  mux_out_valid,            // Mux out data valid
+    output logic                  out_q_err,                // Mux out fifo error
+    output logic                  out_q_perr                // Mux out fifo ram parity error
+    );
 
-                    .m_tready       (  mux_out_ready     ),
-                    .m_tvalid       (  mux_out_valid     ),
-                    .m_tdata        (  mux_out_data      ),
-                    .m_tkeep        (                    ),
-                    .m_tlast        (                    ),
-                    .m_tid          (                    ),
-                    .m_tdest        (                    ),
-                    .m_tuser        (                    )
-                    );
+    parameter M = (N==1)? 1 : $clog2(N);
+    logic [M-1:0]       select;                   // round robin mux select
+    logic [M-1:0]       select_q;                 // registered select (current selected port)
+    logic               select_en;                // update mux select from round robin search 
+    logic [N-1:0]       bit_vector;               // bit_vector = mux_in_valid & (bandwidth_counter > 0)
+    logic [N-1:0]       bit_rotate;               // round robin rotated version of bit_vector
+    logic               mux_in_sop_or;            // OR of all mux in sop except for the current selected port
+    logic [WIDTH-1:0]   out_q_din;                // out_q(fifo) data in
+    logic               out_q_wen;                // out_q(fifo) write enable strobe
+    logic               out_q_ren;                // out_q(fifo) read enable strobe
+    logic               out_q_ready;              // out_q(fifo) is ready
 
-          assign out_q_err = 1'b0;
-          assign out_q_perr = 1'b0;
+    always_comb begin
+        mux_in_sop_or = 0;
 
-      end else begin : f
-          //
-          // Requested depth is greater than a 2 stage pipeline. Use a FIFO.
-          //
-          logic out_q_full;
-          assign out_q_ready = ~out_q_full;
+        // OR of all mux_in_sop except for current selected mux port
+        for (int i=0; i<N; i++)
+            if (i!=select_q) mux_in_sop_or = mux_in_sop_or | mux_in_sop[i];
 
-          bfifo  #(                                                            // 0-delay fifo (din in clk0, dout is valid clk1)
-                   .WIDTH           (     WIDTH          )                    ,// all outputs are registered
-                   .DEPTH           (     DEPTH          )                    ,//
-                   .FULL_THRESHOLD  (  2**DEPTH          )                    ,// full threshold dec per round trip latency of mux_in_ready + REG_IN=1
-                   .REG_IN          (       0            )                    ,// registering fifo_din and fifo_wen.
-                   .REG_OUT         (       1            )                     //
-                   )                                                           //
-              out_q                                                            //
-                   (                                                           //
-                   .fifo_din        (  out_q_din         )                    ,// FIFO write data in
-                   .fifo_wen        (  out_q_wen         )                    ,// FIFO write enable
-                   .fifo_ren        (  out_q_ren         )                    ,// FIFO read enable
-                   .clk             (  clk               )                    ,// clock
-                   .Resetb          (  rst_n             )                    ,// Reset active low
-                                                                               //--------------------- Output  ------------------
-                   .fifo_dout       (  mux_out_data      )                    ,// FIFO read data out
-                   .fifo_out        (                    )                    ,// FIFO unreg read data (not used)
-                   .fifo_count      (                    )                    ,//
-                   .not_empty       (  mux_out_valid     )                    ,// FIFO is not empty
-                   .not_empty_out   (                    )                    ,// FIFO unreg not empty (not used)
-                   .not_empty_dup   (                    )                    ,// FIFO unreg not empty (not used)
-                   .full            (  out_q_full        )                    ,// FIFO count > FULL_THRESHOLD
-                   .fifo_err        (  out_q_err         )                    ,// FIFO overflow/underflow error
-                   .fifo_perr       (  out_q_perr        )                     // FIFO pairty error
-                   )                                                          ;//
-      end
-endmodule                                                                      //
+        // bit_vector represents mux_in_valid AND bandwidth_count > 0
+        for (int i=0; i<N; i++)
+            bit_vector[i]=  mux_in_valid[i];
+
+        // rotate higest port to least priority (round robin priority)a
+        bit_rotate =  bit_vector >> select_q
+                   |  bit_vector <<(N-select_q);
+
+        // select = highest priority port on the rotated mux_in_valid
+        select = select_q;
+        for (int i=0; i<N; i++)
+            if (bit_rotate[i])
+                select = (select_q+i+1)>N ? select_q + i - N
+                                          : select_q + i;
+    end
+
+    always_comb begin
+        mux_in_ready           = 0;
+        // indicates arbitration accepted input port data
+        mux_in_ready[select_q] = out_q_ready;
+
+        // if mux pipe reg is instantiated connect fifo to pipe out
+        out_q_din    = mux_in_data  [select_q];
+        // output fifo write enable = in_ready & in_valid
+        out_q_wen    = mux_in_ready [select_q]
+                     & mux_in_valid [select_q];
+        // output fifo read enable = out_ready & out_valid
+        out_q_ren    = mux_out_ready & mux_out_valid;
+    end
+
+    always_ff @(posedge clk) begin
+        // update select if enabled; else hold
+        if (select_en) select_q <= select;
+
+        // if current selected mux port ready is asserted
+        if (mux_in_ready[select_q]) begin
+            // check if it is a start of packet, if so disable switching to prevent mux
+            if (mux_in_sop[select_q] &  select_en    ) select_en <= 0;
+            // port change during a xfer.  hold select_q throughout the xfer.
+            if (mux_in_sop[select_q] &  select_en    ) select_q  <= select_q;
+            // packet is completing and there are other xfer requests.  swithc to new owner
+            if (mux_in_eop[select_q] &  mux_in_sop_or) select_q  <= select;
+            // if no other requests, reenable mux switching
+            if (mux_in_eop[select_q] & !mux_in_sop_or) select_en <= 1;
+        end
+
+        if (!rst_n) begin
+            select_q  <=  0;
+            select_en <=  1;
+        end
+    end
+
+    if (DEPTH <= 1) begin : p
+       //
+       // Requested depth is equivalent to a 2 stage skid buffer. Use
+       // that simpler primitive instead.
+       //
+       ofs_fim_axis_register  #(
+                .ENABLE_TKEEP    (       0            ),
+                .ENABLE_TLAST    (       0            ),
+                .TDATA_WIDTH     (     WIDTH          ),
+                .REG_IN          (     REG_OUT        )
+                )
+           out_q
+                (
+                 .clk,
+                 .rst_n,
+
+                 .s_tready       (  out_q_ready       ),
+                 .s_tvalid       (  mux_in_valid[select_q] ),
+                 .s_tdata        (  out_q_din         ),
+                 .s_tkeep        (  '0                ),
+                 .s_tlast        (  '0                ),
+                 .s_tid          (  '0                ),
+                 .s_tdest        (  '0                ),
+                 .s_tuser        (  '0                ),
+
+                 .m_tready       (  mux_out_ready     ),
+                 .m_tvalid       (  mux_out_valid     ),
+                 .m_tdata        (  mux_out_data      ),
+                 .m_tkeep        (                    ),
+                 .m_tlast        (                    ),
+                 .m_tid          (                    ),
+                 .m_tdest        (                    ),
+                 .m_tuser        (                    )
+                 );
+
+       assign out_q_err = 1'b0;
+       assign out_q_perr = 1'b0;
+
+    end else begin : f
+       //
+       // Requested depth is greater than a 2 stage pipeline. Use a FIFO.
+       //
+       logic out_q_full;
+       assign out_q_ready = ~out_q_full;
+
+       bfifo  #(                                           // 0-delay fifo (din in clk0, dout is valid clk1)
+                .WIDTH           (     WIDTH          ),   // all outputs are registered
+                .DEPTH           (     DEPTH          ),   //
+                .FULL_THRESHOLD  (  2**DEPTH          ),   // full threshold dec per round trip latency of mux_in_ready + REG_IN=1
+                .REG_IN          (       0            ),   // registering fifo_din and fifo_wen.
+                .REG_OUT         (       1            )    //
+                )                                          //
+           out_q                                           //
+                (                                          //
+                .fifo_din        (  out_q_din         ),   // FIFO write data in
+                .fifo_wen        (  out_q_wen         ),   // FIFO write enable
+                .fifo_ren        (  out_q_ren         ),   // FIFO read enable
+                .clk             (  clk               ),   // clock
+                .Resetb          (  rst_n             ),   // Reset active low
+                                                           //--------------------- Output  ------------------
+                .fifo_dout       (  mux_out_data      ),   // FIFO read data out
+                .fifo_out        (                    ),   // FIFO unreg read data (not used)
+                .fifo_count      (                    ),   //
+                .not_empty       (  mux_out_valid     ),   // FIFO is not empty
+                .not_empty_out   (                    ),   // FIFO unreg not empty (not used)
+                .not_empty_dup   (                    ),   // FIFO unreg not empty (not used)
+                .full            (  out_q_full        ),   // FIFO count > FULL_THRESHOLD
+                .fifo_err        (  out_q_err         ),   // FIFO overflow/underflow error
+                .fifo_perr       (  out_q_perr        )    // FIFO pairty error
+                );
+
+    end
+endmodule
