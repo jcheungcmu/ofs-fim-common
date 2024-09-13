@@ -86,29 +86,29 @@ if [ $VCSMX -eq 1 ]; then
    cd ${TEST_DIR}/sim_vcsmx || { echo "run_sim.sh: cd ${TEST_DIR}/sim_vcsmx failed" ; exit 1 ; }
    SIM_DIR="${TEST_DIR}/sim_vcsmx"
    . ${SIM_DIR}/vcs_filelist.sh
-   USER_DEFINED_SIM_OPTIONS='+vcs -l ./transcript'
-   USER_DEFINED_ELAB_OPTIONS='-debug_acc+pp+dmptf -debug_region+cell+encrypt'
+   SIM_OPTIONS='+vcs -l ./transcript'
+   ELAB_OPTIONS='-debug_acc+pp+dmptf -debug_region+cell+encrypt'
    VLOGAN_PARAMS=""
 elif [ $MSIM -eq 1 ]; then
    echo "Running Questasim simulation in $TEST_DIR/sim_msim"
    cd ${TEST_DIR}/sim_msim || { echo "run_sim.sh: cd ${TEST_DIR}/sim_msim failed" ; exit 1 ; } 
-   USER_DEFINED_ELAB_OPTIONS=""
-   USER_DEFINED_SIM_OPTIONS="-finish exit"
+   ELAB_OPTIONS=""
+   SIM_OPTIONS="-finish exit"
    SIM_DIR="${TEST_DIR}/sim_msim"
    . ${SIM_DIR}/msim_filelist.sh
-   USER_DEFINED_SIM_OPTIONS='-l ./transcript'
-   USER_DEFINED_ELAB_OPTIONS=""
+   SIM_OPTIONS='-l ./transcript'
+   ELAB_OPTIONS=""
    VLOG_PARAMS="+libext+.v+.sv" 
 
 else # VCS
    echo "Running VCS simulation in $TEST_DIR/sim_vcs"
    cd ${TEST_DIR}/sim_vcs || { echo "run_sim.sh: cd ${TEST_DIR}/sim_vcs failed" ; exit 1 ; } 
-   USER_DEFINED_ELAB_OPTIONS=""
-   USER_DEFINED_SIM_OPTIONS='+vcs+finish+100'
+   ELAB_OPTIONS=""
+   SIM_OPTIONS='+vcs+finish+100'
    SIM_DIR="${TEST_DIR}/sim_vcs"
    . ${SIM_DIR}/vcs_filelist.sh
-   USER_DEFINED_SIM_OPTIONS='+vcs -l ./transcript'
-   USER_DEFINED_ELAB_OPTIONS='-debug_acc+pp+dmptf -debug_region+cell+encrypt'
+   SIM_OPTIONS='+vcs -l ./transcript'
+   ELAB_OPTIONS='-debug_acc+pp+dmptf -debug_region+cell+encrypt'
 
 fi
 
@@ -214,6 +214,7 @@ echo "NTB_OPTS=$NTB_OPTS"
 echo "USER_DEFINED_ELAB_OPTIONS=$USER_DEFINED_ELAB_OPTIONS"
 echo "ELAB_OPTIONS=$ELAB_OPTIONS"
 echo "USER_DEFINED_SIM_OPTIONS=$USER_DEFINED_SIM_OPTIONS"
+echo "SIM_OPTIONS=$SIM_OPTIONS"
 echo "VLOG_OPTIONS=$VLOG_OPTIONS"
 echo "MSIM_OPTS=${MSIM_OPTS[@]}"
 echo "VCS_SIMV_PARAMS=$VCS_SIMV_PARAMS"
@@ -260,7 +261,7 @@ else # VCS and VCS-MX
         $NTB_OPTS \
         $TB_SRC +error+1 -l vlog.log
 
-    vcs -full64 -licqueue +vcs+lic+wait -partcomp -fastpartcomp=j8 -j4 \
+    vcs -full64 -licqueue +vcs+lic+wait -fastpartcomp=j8 -j4 \
         $QUARTUS_ROOTDIR/eda/sim_lib/quartus_dpi.c \
         $QUARTUS_ROOTDIR/eda/sim_lib/simsf_dpi.cpp \
         +lint=TFIPC-L \
