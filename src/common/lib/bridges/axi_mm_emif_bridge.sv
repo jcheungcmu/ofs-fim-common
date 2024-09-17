@@ -82,6 +82,7 @@ module axi_mm_emif_bridge #(
       m_if.awcache        = m_if_wire.awcache;
       m_if.awprot         = m_if_wire.awprot;
       m_if.awuser         = m_if_wire.awuser;
+      m_if.awqos          = m_if_wire.awqos;
                    
       // Write data channel
       // Inputs
@@ -113,6 +114,7 @@ module axi_mm_emif_bridge #(
       m_if.arcache       = m_if_wire.arcache;
       m_if.arprot        = m_if_wire.arprot;
       m_if.aruser        = m_if_wire.aruser;
+      m_if.arqos         = m_if_wire.arqos;
 
       // Read response channel
       // Outputs
@@ -165,7 +167,7 @@ module axi_mm_emif_bridge #(
        .s_awlock   (s_if.awlock),
        .s_awcache  (s_if.awcache),
        .s_awprot   (s_if.awprot),
-       .s_awqos    ('0),
+       .s_awqos    (s_if.awqos),
        .s_awregion ('0),
        .s_awuser   (s_if.awuser),
        .s_wready   (s_if.wready),
@@ -189,7 +191,7 @@ module axi_mm_emif_bridge #(
        .s_arlock   (s_if.arlock),
        .s_arcache  (s_if.arcache),
        .s_arprot   (s_if.arprot),
-       .s_arqos    ('0),
+       .s_arqos    (s_if.arqos),
        .s_arregion ('0),
        .s_aruser   (s_if.aruser),
        .s_rready   (s_if.rready),
@@ -211,7 +213,7 @@ module axi_mm_emif_bridge #(
        .m_awlock   (m_if_wire.awlock),
        .m_awcache  (m_if_wire.awcache),
        .m_awprot   (m_if_wire.awprot),
-       .m_awqos    (),
+       .m_awqos    (m_if_wire.awqos),
        .m_awregion (),
        .m_awuser   (m_if_wire.awuser),
        .m_wready   (m_if_wire.wready),
@@ -235,7 +237,7 @@ module axi_mm_emif_bridge #(
        .m_arlock   (m_if_wire.arlock),
        .m_arcache  (m_if_wire.arcache),
        .m_arprot   (m_if_wire.arprot),
-       .m_arqos    (),
+       .m_arqos    (m_if_wire.arqos),
        .m_arregion (),
        .m_aruser   (m_if_wire.aruser),
        .m_rready   (m_if_wire.rready),

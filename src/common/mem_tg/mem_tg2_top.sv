@@ -238,6 +238,7 @@ for(ch=0; ch < NUM_TG; ch = ch+1) begin : tg_ch
       ext_mem_if[ch].awcache   = tg2_mem_if[ch].awcache;
       ext_mem_if[ch].awprot    = tg2_mem_if[ch].awprot;
       ext_mem_if[ch].awuser    = tg2_mem_if[ch].awuser;
+      ext_mem_if[ch].awqos     = tg2_mem_if[ch].awqos;
                    
       // Write data channel
       // Inputs
@@ -269,6 +270,7 @@ for(ch=0; ch < NUM_TG; ch = ch+1) begin : tg_ch
       ext_mem_if[ch].arcache   = tg2_mem_if[ch].arcache;
       ext_mem_if[ch].arprot    = tg2_mem_if[ch].arprot;
       ext_mem_if[ch].aruser    = tg2_mem_if[ch].aruser;
+      ext_mem_if[ch].arqos     = tg2_mem_if[ch].arqos;
 
       // Read response channel
       // Outputs

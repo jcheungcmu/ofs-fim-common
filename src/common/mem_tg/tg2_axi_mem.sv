@@ -36,6 +36,8 @@ logic              local_rst_n;
 
 assign csr_cfg.writeresponsevalid = 1'b0;
 assign ext_mem_if.wuser = '0;
+assign ext_mem_if.awqos = '0;
+assign ext_mem_if.arqos = '0;
 
 mem_ss_tg tg_inst (
    .emif_usr_reset_n (local_rst_n),
