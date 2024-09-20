@@ -10,7 +10,7 @@ module mem_ss_tg (
 		input  wire         emif_usr_reset_n,     // emif_usr_reset_n.reset_n
 		input  wire         ninit_done,           //       ninit_done.ninit_done
 		input  wire         emif_usr_clk,         //     emif_usr_clk.clk
-		output wire [8:0]   axi_awid,             //         ctrl_axi.awid
+		output wire [6:0]   axi_awid,             //         ctrl_axi.awid
 		output wire [44:0]  axi_awaddr,           //                 .awaddr
 		output wire         axi_awvalid,          //                 .awvalid
 		output wire [0:0]   axi_awuser,           //                 .awuser
@@ -21,7 +21,7 @@ module mem_ss_tg (
 		output wire [0:0]   axi_awlock,           //                 .awlock
 		output wire [3:0]   axi_awcache,          //                 .awcache
 		output wire [2:0]   axi_awprot,           //                 .awprot
-		output wire [8:0]   axi_arid,             //                 .arid
+		output wire [6:0]   axi_arid,             //                 .arid
 		output wire [44:0]  axi_araddr,           //                 .araddr
 		output wire         axi_arvalid,          //                 .arvalid
 		output wire [0:0]   axi_aruser,           //                 .aruser
@@ -37,7 +37,7 @@ module mem_ss_tg (
 		output wire         axi_wlast,            //                 .wlast
 		output wire         axi_wvalid,           //                 .wvalid
 		input  wire         axi_wready,           //                 .wready
-		input  wire [8:0]   axi_bid,              //                 .bid
+		input  wire [6:0]   axi_bid,              //                 .bid
 		input  wire [1:0]   axi_bresp,            //                 .bresp
 		input  wire [0:0]   axi_buser,            //                 .buser
 		input  wire         axi_bvalid,           //                 .bvalid
@@ -48,7 +48,7 @@ module mem_ss_tg (
 		input  wire         axi_rlast,            //                 .rlast
 		input  wire         axi_rvalid,           //                 .rvalid
 		output wire         axi_rready,           //                 .rready
-		input  wire [8:0]   axi_rid,              //                 .rid
+		input  wire [6:0]   axi_rid,              //                 .rid
 		output wire         traffic_gen_pass,     //        tg_status.traffic_gen_pass
 		output wire         traffic_gen_fail,     //                 .traffic_gen_fail
 		output wire         traffic_gen_timeout,  //                 .traffic_gen_timeout
@@ -99,7 +99,7 @@ module mem_ss_tg (
 		.PORT_SUBSYSTEM_CSR_AXI4L_BRESP_WIDTH  (2),
 		.PORT_SUBSYSTEM_CSR_AXI4L_RDATA_WIDTH  (32),
 		.PORT_SUBSYSTEM_CSR_AXI4L_RRESP_WIDTH  (2),
-		.PORT_CTRL_AXI4_AWID_WIDTH             (9),
+		.PORT_CTRL_AXI4_AWID_WIDTH             (7),
 		.PORT_CTRL_AXI4_AWADDR_WIDTH           (44),
 		.PORT_CTRL_AXI4_AWUSER_WIDTH           (1),
 		.PORT_CTRL_AXI4_AWLEN_WIDTH            (8),
@@ -108,7 +108,7 @@ module mem_ss_tg (
 		.PORT_CTRL_AXI4_AWLOCK_WIDTH           (1),
 		.PORT_CTRL_AXI4_AWCACHE_WIDTH          (4),
 		.PORT_CTRL_AXI4_AWPROT_WIDTH           (3),
-		.PORT_CTRL_AXI4_ARID_WIDTH             (9),
+		.PORT_CTRL_AXI4_ARID_WIDTH             (7),
 		.PORT_CTRL_AXI4_ARADDR_WIDTH           (44),
 		.PORT_CTRL_AXI4_ARUSER_WIDTH           (1),
 		.PORT_CTRL_AXI4_ARLEN_WIDTH            (8),
@@ -119,10 +119,10 @@ module mem_ss_tg (
 		.PORT_CTRL_AXI4_ARPROT_WIDTH           (3),
 		.PORT_CTRL_AXI4_WDATA_WIDTH            (512),
 		.PORT_CTRL_AXI4_WSTRB_WIDTH            (64),
-		.PORT_CTRL_AXI4_BID_WIDTH              (9),
+		.PORT_CTRL_AXI4_BID_WIDTH              (7),
 		.PORT_CTRL_AXI4_BRESP_WIDTH            (2),
 		.PORT_CTRL_AXI4_BUSER_WIDTH            (1),
-		.PORT_CTRL_AXI4_RID_WIDTH              (9),
+		.PORT_CTRL_AXI4_RID_WIDTH              (7),
 		.PORT_CTRL_AXI4_RDATA_WIDTH            (512),
 		.PORT_CTRL_AXI4_RRESP_WIDTH            (2),
 		.PORT_CTRL_AXI4_RUSER_WIDTH            (1),
