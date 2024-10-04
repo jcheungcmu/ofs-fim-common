@@ -1,8 +1,17 @@
 <?xml version="1.0" ?>
-<!--
-  Copyright (C) 2023-2024 Intel Corporation
-  SPDX-License-Identifier: MIT
-  -->
+<!--Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.-->
 <ipxact:component xmlns:altera="http://www.altera.com/XMLSchema/IPXact2014/extensions" xmlns:ipxact="http://www.accellera.org/XMLSchema/IPXACT/1685-2014">
   <ipxact:vendor>Intel Corporation</ipxact:vendor>
   <ipxact:library>hps_ss_intel_agilex_hps_1</ipxact:library>
@@ -11,10 +20,10 @@
   <ipxact:busInterfaces>
     <ipxact:busInterface>
       <ipxact:name>hps_emif</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="conduit" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="conduit" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="conduit" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="conduit" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -72,10 +81,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>uart1</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="conduit" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="conduit" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="conduit" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="conduit" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -181,10 +190,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>hps_io</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="conduit" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="conduit" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="conduit" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="conduit" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -282,10 +291,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>h2f_reset</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="reset" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="reset" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="reset" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="reset" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -324,10 +333,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>h2f_lw_axi_clock</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="clock" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="clock" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="clock" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="clock" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -361,10 +370,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>h2f_lw_axi_reset</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="reset" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="reset" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="reset" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="reset" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -393,10 +402,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>h2f_lw_axi_master</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -733,6 +742,26 @@
           <ipxact:displayName>maximumOutstandingTransactions</ipxact:displayName>
           <ipxact:value>1</ipxact:value>
         </ipxact:parameter>
+        <ipxact:parameter parameterId="dataCheck" type="bit">
+          <ipxact:name>dataCheck</ipxact:name>
+          <ipxact:displayName>dataCheck</ipxact:displayName>
+          <ipxact:value>false</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="addressCheck" type="bit">
+          <ipxact:name>addressCheck</ipxact:name>
+          <ipxact:displayName>addressCheck</ipxact:displayName>
+          <ipxact:value>false</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="securityAttribute" type="bit">
+          <ipxact:name>securityAttribute</ipxact:name>
+          <ipxact:displayName>securityAttribute</ipxact:displayName>
+          <ipxact:value>false</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="userData" type="bit">
+          <ipxact:name>userData</ipxact:name>
+          <ipxact:displayName>userData</ipxact:displayName>
+          <ipxact:value>false</ipxact:value>
+        </ipxact:parameter>
         <ipxact:parameter parameterId="readIssuingCapability" type="longint">
           <ipxact:name>readIssuingCapability</ipxact:name>
           <ipxact:displayName>Read issuing capability</ipxact:displayName>
@@ -747,6 +776,16 @@
           <ipxact:name>combinedIssuingCapability</ipxact:name>
           <ipxact:displayName>Combined issuing capability</ipxact:displayName>
           <ipxact:value>16</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="enableConcurrentSubordinateAccess" type="longint">
+          <ipxact:name>enableConcurrentSubordinateAccess</ipxact:name>
+          <ipxact:displayName>enableConcurrentSubordinateAccess</ipxact:displayName>
+          <ipxact:value>0</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="noRepeatedIdsBetweenSubordinates" type="longint">
+          <ipxact:name>noRepeatedIdsBetweenSubordinates</ipxact:name>
+          <ipxact:displayName>noRepeatedIdsBetweenSubordinates</ipxact:displayName>
+          <ipxact:value>0</ipxact:value>
         </ipxact:parameter>
         <ipxact:parameter parameterId="issuesINCRBursts" type="bit">
           <ipxact:name>issuesINCRBursts</ipxact:name>
@@ -767,10 +806,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>f2h_axi_clock</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="clock" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="clock" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="clock" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="clock" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -804,10 +843,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>f2h_axi_reset</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="reset" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="reset" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="reset" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="reset" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -836,10 +875,10 @@
     </ipxact:busInterface>
     <ipxact:busInterface>
       <ipxact:name>f2h_axi_slave</ipxact:name>
-      <ipxact:busType vendor="intel" library="intel" name="acelite" version="24.1"></ipxact:busType>
+      <ipxact:busType vendor="intel" library="intel" name="acelite" version="24.3"></ipxact:busType>
       <ipxact:abstractionTypes>
         <ipxact:abstractionType>
-          <ipxact:abstractionRef vendor="intel" library="intel" name="acelite" version="24.1"></ipxact:abstractionRef>
+          <ipxact:abstractionRef vendor="intel" library="intel" name="acelite" version="24.3"></ipxact:abstractionRef>
           <ipxact:portMaps>
             <ipxact:portMap>
               <ipxact:logicalPort>
@@ -1255,6 +1294,26 @@
           <ipxact:name>maximumOutstandingTransactions</ipxact:name>
           <ipxact:displayName>maximumOutstandingTransactions</ipxact:displayName>
           <ipxact:value>1</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="dataCheck" type="bit">
+          <ipxact:name>dataCheck</ipxact:name>
+          <ipxact:displayName>dataCheck</ipxact:displayName>
+          <ipxact:value>false</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="addressCheck" type="bit">
+          <ipxact:name>addressCheck</ipxact:name>
+          <ipxact:displayName>addressCheck</ipxact:displayName>
+          <ipxact:value>false</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="securityAttribute" type="bit">
+          <ipxact:name>securityAttribute</ipxact:name>
+          <ipxact:displayName>securityAttribute</ipxact:displayName>
+          <ipxact:value>false</ipxact:value>
+        </ipxact:parameter>
+        <ipxact:parameter parameterId="userData" type="bit">
+          <ipxact:name>userData</ipxact:name>
+          <ipxact:displayName>userData</ipxact:displayName>
+          <ipxact:value>false</ipxact:value>
         </ipxact:parameter>
         <ipxact:parameter parameterId="readAcceptanceCapability" type="longint">
           <ipxact:name>readAcceptanceCapability</ipxact:name>
@@ -3098,11 +3157,6 @@
           <ipxact:name>HNOC_Interface_Mode</ipxact:name>
           <ipxact:displayName>HNOC Interface Configuration</ipxact:displayName>
           <ipxact:value>0</ipxact:value>
-        </ipxact:parameter>
-        <ipxact:parameter parameterId="Mem_Interleave_Enable" type="bit">
-          <ipxact:name>Mem_Interleave_Enable</ipxact:name>
-          <ipxact:displayName>Enable Interleave Mode</ipxact:displayName>
-          <ipxact:value>false</ipxact:value>
         </ipxact:parameter>
         <ipxact:parameter parameterId="SMMU_sid_config" type="int">
           <ipxact:name>SMMU_sid_config</ipxact:name>
@@ -6354,42 +6408,42 @@
         <ipxact:busInterfaces>
           <ipxact:busInterface>
             <ipxact:name>bridges.axi_h2f</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:busType>
             <ipxact:slave></ipxact:slave>
           </ipxact:busInterface>
           <ipxact:busInterface>
             <ipxact:name>bridges.axi_h2f_lw</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:busType>
             <ipxact:slave></ipxact:slave>
           </ipxact:busInterface>
           <ipxact:busInterface>
             <ipxact:name>bridges.f2h</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="acelite" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="acelite" version="24.3"></ipxact:busType>
             <ipxact:slave></ipxact:slave>
           </ipxact:busInterface>
           <ipxact:busInterface>
             <ipxact:name>arm_gic_0.axi_slave0</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:busType>
             <ipxact:slave></ipxact:slave>
           </ipxact:busInterface>
           <ipxact:busInterface>
             <ipxact:name>arm_gic_0.axi_slave1</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:busType>
             <ipxact:slave></ipxact:slave>
           </ipxact:busInterface>
           <ipxact:busInterface>
             <ipxact:name>bridges.axi_f2h</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:busType>
             <ipxact:master></ipxact:master>
           </ipxact:busInterface>
           <ipxact:busInterface>
             <ipxact:name>bridges.h2f_lw</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:busType>
             <ipxact:master></ipxact:master>
           </ipxact:busInterface>
           <ipxact:busInterface>
             <ipxact:name>arm_a9_0.altera_axi_master</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi" version="24.3"></ipxact:busType>
             <ipxact:master>
               <ipxact:addressSpaceRef addressSpaceRef="arm_a9_0.altera_axi_master">
                 <ipxact:baseAddress>0xffff_d000</ipxact:baseAddress>
@@ -6398,7 +6452,7 @@
           </ipxact:busInterface>
           <ipxact:busInterface>
             <ipxact:name>arm_a9_1.altera_axi_master</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi" version="24.3"></ipxact:busType>
             <ipxact:master>
               <ipxact:addressSpaceRef addressSpaceRef="arm_a9_1.altera_axi_master">
                 <ipxact:baseAddress>0xffff_d000</ipxact:baseAddress>

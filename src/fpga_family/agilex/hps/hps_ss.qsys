@@ -1,8 +1,17 @@
 <?xml version="1.0" ?>
-<!--
-  Copyright (C) 2023-2024 Intel Corporation
-  SPDX-License-Identifier: MIT
-  -->
+<!--Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.-->
 <ipxact:design xmlns:altera="http://www.altera.com/XMLSchema/IPXact2014/extensions" xmlns:ipxact="http://www.accellera.org/XMLSchema/IPXACT/1685-2014">
   <ipxact:vendor>Altera Corporation</ipxact:vendor>
   <ipxact:library>hps_ss</ipxact:library>
@@ -1255,6 +1264,22 @@
                             &lt;value&gt;1&lt;/value&gt;
                         &lt;/entry&gt;
                         &lt;entry&gt;
+                            &lt;key&gt;dataCheck&lt;/key&gt;
+                            &lt;value&gt;false&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;addressCheck&lt;/key&gt;
+                            &lt;value&gt;false&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;securityAttribute&lt;/key&gt;
+                            &lt;value&gt;false&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;userData&lt;/key&gt;
+                            &lt;value&gt;false&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
                             &lt;key&gt;readIssuingCapability&lt;/key&gt;
                             &lt;value&gt;16&lt;/value&gt;
                         &lt;/entry&gt;
@@ -1265,6 +1290,14 @@
                         &lt;entry&gt;
                             &lt;key&gt;combinedIssuingCapability&lt;/key&gt;
                             &lt;value&gt;16&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;enableConcurrentSubordinateAccess&lt;/key&gt;
+                            &lt;value&gt;0&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;noRepeatedIdsBetweenSubordinates&lt;/key&gt;
+                            &lt;value&gt;0&lt;/value&gt;
                         &lt;/entry&gt;
                         &lt;entry&gt;
                             &lt;key&gt;issuesINCRBursts&lt;/key&gt;
@@ -1806,6 +1839,22 @@
                         &lt;entry&gt;
                             &lt;key&gt;maximumOutstandingTransactions&lt;/key&gt;
                             &lt;value&gt;1&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;dataCheck&lt;/key&gt;
+                            &lt;value&gt;false&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;addressCheck&lt;/key&gt;
+                            &lt;value&gt;false&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;securityAttribute&lt;/key&gt;
+                            &lt;value&gt;false&lt;/value&gt;
+                        &lt;/entry&gt;
+                        &lt;entry&gt;
+                            &lt;key&gt;userData&lt;/key&gt;
+                            &lt;value&gt;false&lt;/value&gt;
                         &lt;/entry&gt;
                         &lt;entry&gt;
                             &lt;key&gt;readAcceptanceCapability&lt;/key&gt;
@@ -3899,11 +3948,11 @@
       </altera:module>
     </altera:modules>
     <altera:connections>
-      <altera:connection altera:kind="clock" altera:version="24.1" altera:start="clock_in.out_clk" altera:end="reset_in.clk"></altera:connection>
-      <altera:connection altera:kind="clock" altera:version="24.1" altera:start="clock_in.out_clk" altera:end="intel_agilex_hps_1.f2h_axi_clock"></altera:connection>
-      <altera:connection altera:kind="clock" altera:version="24.1" altera:start="clock_in.out_clk" altera:end="intel_agilex_hps_1.h2f_lw_axi_clock"></altera:connection>
-      <altera:connection altera:kind="reset" altera:version="24.1" altera:start="reset_in.out_reset" altera:end="intel_agilex_hps_1.f2h_axi_reset"></altera:connection>
-      <altera:connection altera:kind="reset" altera:version="24.1" altera:start="reset_in.out_reset" altera:end="intel_agilex_hps_1.h2f_lw_axi_reset"></altera:connection>
+      <altera:connection altera:kind="clock" altera:version="24.3" altera:start="clock_in.out_clk" altera:end="reset_in.clk"></altera:connection>
+      <altera:connection altera:kind="clock" altera:version="24.3" altera:start="clock_in.out_clk" altera:end="intel_agilex_hps_1.f2h_axi_clock"></altera:connection>
+      <altera:connection altera:kind="clock" altera:version="24.3" altera:start="clock_in.out_clk" altera:end="intel_agilex_hps_1.h2f_lw_axi_clock"></altera:connection>
+      <altera:connection altera:kind="reset" altera:version="24.3" altera:start="reset_in.out_reset" altera:end="intel_agilex_hps_1.f2h_axi_reset"></altera:connection>
+      <altera:connection altera:kind="reset" altera:version="24.3" altera:start="reset_in.out_reset" altera:end="intel_agilex_hps_1.h2f_lw_axi_reset"></altera:connection>
     </altera:connections>
     <altera:interconnect_requirements></altera:interconnect_requirements>
     <altera:wire_level_connections></altera:wire_level_connections>
@@ -3929,7 +3978,7 @@
         <ipxact:busInterfaces>
           <ipxact:busInterface>
             <ipxact:name>intel_agilex_hps_1.h2f_lw_axi_master</ipxact:name>
-            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.1"></ipxact:busType>
+            <ipxact:busType vendor="intel" library="intel" name="axi4" version="24.3"></ipxact:busType>
             <ipxact:master></ipxact:master>
           </ipxact:busInterface>
         </ipxact:busInterfaces>
