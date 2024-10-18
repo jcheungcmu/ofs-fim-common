@@ -23,24 +23,6 @@ package pcie_ss_pkg;
 localparam TDATA_WIDTH = ofs_pcie_ss_cfg_pkg::TDATA_WIDTH;
 localparam TUSER_WIDTH = ofs_pcie_ss_cfg_pkg::TUSER_WIDTH;
 
-localparam DW_LEN = 32             ;
-localparam DW0_L  = 0              ;
-localparam DW1_L  = DW0_L + DW_LEN ;
-localparam DW2_L  = DW1_L + DW_LEN ;
-localparam DW3_L  = DW2_L + DW_LEN ;
-localparam DW4_L  = DW3_L + DW_LEN ;
-localparam DW5_L  = DW4_L + DW_LEN ;
-localparam DW6_L  = DW5_L + DW_LEN ;
-localparam DW7_L  = DW6_L + DW_LEN ; 
-localparam DW8_L  = DW7_L + DW_LEN ;
-localparam DW9_L  = DW8_L + DW_LEN ;
-localparam DWa_L  = DW9_L + DW_LEN ;
-localparam DWb_L  = DWa_L + DW_LEN ;
-localparam DWc_L  = DWb_L + DW_LEN ;
-localparam DWd_L  = DWc_L + DW_LEN ;
-localparam DWe_L  = DWd_L + DW_LEN ; 
-localparam DWf_L  = DWe_L + DW_LEN ; 
-
 
 // ---------------------------------------------------------------------------
 // Format flit, possibly with a header, as a single line
@@ -142,19 +124,6 @@ task display_cycle;
                   $time,str, s_rx_tx, tag, addr[63:32], addr[31:0], fmttype, data[127:96], data[95:64], 
                         data[63:32], data[31:0], ReqHdr.pf_num, ReqHdr.vf_num, ReqHdr.vf_active, len);
     end
-  
-    if(!sop | sop & dat_header)  //Header data payload
-    begin
-        if (!sop)
-        $display ("T=%t %0s_%2s:%3h %8h %8h      DATA0\t[%8h %8h %8h %8h]",
-        $time,str,s_rx_tx, tag, addr[63:32],addr[31:0], d[DW3_L+:DW_LEN],d[DW2_L+:DW_LEN],d[DW1_L+:DW_LEN],d[DW0_L+:DW_LEN]);
-        $display ("T=%t %0s_%2s:%3h %8h %8h      DATA1\t[%8h %8h %8h %8h]",
-        $time,str,s_rx_tx, tag, addr[63:32],addr[31:0], d[DW7_L+:DW_LEN],d[DW6_L+:DW_LEN],d[DW5_L+:DW_LEN],d[DW4_L+:DW_LEN]);
-        $display ("T=%t %0s_%2s:%3h %8h %8h      DATA2\t[%8h %8h %8h %8h]",
-        $time,str,s_rx_tx, tag, addr[63:32],addr[31:0], d[DWb_L+:DW_LEN],d[DWa_L+:DW_LEN],d[DW9_L+:DW_LEN],d[DW8_L+:DW_LEN]);
-        $display ("T=%t %0s_%2s:%3h %8h %8h      DATA3\t[%8h %8h %8h %8h]",
-        $time,str,s_rx_tx, tag, addr[63:32],addr[31:0], d[DWf_L+:DW_LEN],d[DWe_L+:DW_LEN],d[DWd_L+:DW_LEN],d[DWc_L+:DW_LEN]);
-    end                                                       
   end
   // synthesis translate_on
 endtask: display_cycle

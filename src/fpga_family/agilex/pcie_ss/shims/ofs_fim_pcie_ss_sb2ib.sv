@@ -167,33 +167,57 @@ module ofs_fim_pcie_ss_sb2ib
                               (source_is_sop && prev_data_valid);
 
     // Generate the outbound payload
-    always_comb
+    if (DATA_AFTER_HDR_WIDTH != 0)
     begin
-        if (source_is_sop && source.tready)
+        always_comb
         begin
-            // SOP: payload is first portion of data + header
-            sink_skid.tdata = { source.tdata[0 +: DATA_AFTER_HDR_WIDTH], hdr_source };
-            sink_skid.tkeep = { source.tkeep[0 +: DATA_AFTER_HDR_TKEEP_WIDTH],
-                                {(HDR_TKEEP_WIDTH){1'b1}} };
-            sink_skid.tlast = source_is_single_beat;
-            sink_skid.tuser_vendor = source.tuser_vendor[OUT_TUSER_WIDTH-1 : 0];
-        end
-        else
-        begin
-            sink_skid.tdata = { source.tdata[0 +: DATA_AFTER_HDR_WIDTH],
-                                prev_data[0 +: HDR_WIDTH] };
-            sink_skid.tkeep = { source.tkeep[0 +: DATA_AFTER_HDR_TKEEP_WIDTH],
-                                prev_data_keep[0 +: HDR_TKEEP_WIDTH] };
-            if (source_is_sop)
+            if (source_is_sop && source.tready)
             begin
-                // New data isn't being being consumed -- only the prev_data is
-                // valid.
-                sink_skid.tdata[HDR_WIDTH +: DATA_AFTER_HDR_WIDTH] = '0;
-                sink_skid.tkeep[HDR_TKEEP_WIDTH +: DATA_AFTER_HDR_TKEEP_WIDTH] = '0;
+                // SOP: payload is first portion of data + header
+                sink_skid.tdata = { source.tdata[0 +: DATA_AFTER_HDR_WIDTH], hdr_source };
+                sink_skid.tkeep = { source.tkeep[0 +: DATA_AFTER_HDR_TKEEP_WIDTH],
+                                    {(HDR_TKEEP_WIDTH){1'b1}} };
+                sink_skid.tlast = source_is_single_beat;
+                sink_skid.tuser_vendor = source.tuser_vendor[OUT_TUSER_WIDTH-1 : 0];
             end
+            else
+            begin
+                sink_skid.tdata = { source.tdata[0 +: DATA_AFTER_HDR_WIDTH],
+                                    prev_data[0 +: HDR_WIDTH] };
+                sink_skid.tkeep = { source.tkeep[0 +: DATA_AFTER_HDR_TKEEP_WIDTH],
+                                    prev_data_keep[0 +: HDR_TKEEP_WIDTH] };
+                if (source_is_sop)
+                begin
+                    // New data isn't being being consumed -- only the prev_data is
+                    // valid.
+                    sink_skid.tdata[HDR_WIDTH +: DATA_AFTER_HDR_WIDTH] = '0;
+                    sink_skid.tkeep[HDR_TKEEP_WIDTH +: DATA_AFTER_HDR_TKEEP_WIDTH] = '0;
+                end
 
-            sink_skid.tlast = source_is_sop || !source.tkeep[DATA_AFTER_HDR_TKEEP_WIDTH];
-            sink_skid.tuser_vendor = '0;
+                sink_skid.tlast = source_is_sop || !source.tkeep[DATA_AFTER_HDR_TKEEP_WIDTH];
+                sink_skid.tuser_vendor = '0;
+            end
+        end
+    end
+    else
+    begin
+        always_comb
+        begin
+            if (source_is_sop && source.tready)
+            begin
+                // SOP: payload is first portion of data + header
+                sink_skid.tdata = hdr_source;
+                sink_skid.tkeep = {(HDR_TKEEP_WIDTH){1'b1}};
+                sink_skid.tlast = source_is_single_beat;
+                sink_skid.tuser_vendor = source.tuser_vendor[OUT_TUSER_WIDTH-1 : 0];
+            end
+            else
+            begin
+                sink_skid.tdata = prev_data[0 +: HDR_WIDTH];
+                sink_skid.tkeep = prev_data_keep[0 +: HDR_TKEEP_WIDTH];
+                sink_skid.tlast = source_is_sop;
+                sink_skid.tuser_vendor = '0;
+            end
         end
     end
 

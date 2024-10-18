@@ -37,18 +37,11 @@ module ofs_fim_pcie_ss_rx_seg_align
     );
 
     wire clk = stream_in.clk;
-    bit rst_n = 1'b0;
-    always @(posedge clk) begin
-        rst_n <= stream_in.rst_n;
-    end
+    wire rst_n = stream_in.rst_n;
 
     localparam TDATA_WIDTH = $bits(stream_out.tdata);
-    localparam TKEEP_WIDTH = TDATA_WIDTH/8;
     localparam IN_TUSER_WIDTH = $bits(stream_in.tuser_vendor);
     localparam OUT_TUSER_WIDTH = $bits(stream_out.tuser_vendor);
-
-    localparam SEG_TDATA_WIDTH = TDATA_WIDTH / NUM_OF_SEG;
-    localparam SEG_TKEEP_WIDTH = TKEEP_WIDTH / NUM_OF_SEG;
 
     // synthesis translate_off
     initial begin : error_proc
@@ -63,6 +56,56 @@ module ofs_fim_pcie_ss_rx_seg_align
     end
     // synthesis translate_on
 
+
+    if (NUM_OF_SEG > 1) begin : a
+        ofs_fim_pcie_ss_rx_seg_align_impl
+          #(
+            .NUM_OF_SEG(NUM_OF_SEG),
+            .PL_DEPTH_IN(PL_DEPTH_IN)
+            )
+          impl
+           (
+            .stream_in,
+            .stream_out
+            );
+    end
+    else begin : a
+        // Only one segment. No realignment required.
+        ofs_fim_axis_pipeline #(.PL_DEPTH(0)) conn(.clk, .rst_n, .axis_s(stream_in), .axis_m(stream_out));
+    end
+
+endmodule // ofs_fim_pcie_ss_rx_seg_align
+
+
+// Main realignment implementation, instantiated when NUM_OF_SEG > 1.
+module ofs_fim_pcie_ss_rx_seg_align_impl
+  #(
+    parameter NUM_OF_SEG = 2,
+
+    // Set to 1 to add a skid buffer to the inbound stream.
+    parameter PL_DEPTH_IN = 0
+    )
+   (
+    // Input stream with NUM_OF_SEG segments
+    pcie_ss_axis_if.sink stream_in,
+
+    // Output stream, mapped to one SOP at 0.
+    pcie_ss_axis_if.source stream_out
+    );
+
+    wire clk = stream_in.clk;
+    bit rst_n = 1'b0;
+    always @(posedge clk) begin
+        rst_n <= stream_in.rst_n;
+    end
+
+    localparam TDATA_WIDTH = $bits(stream_out.tdata);
+    localparam TKEEP_WIDTH = TDATA_WIDTH/8;
+    localparam IN_TUSER_WIDTH = $bits(stream_in.tuser_vendor);
+    localparam OUT_TUSER_WIDTH = $bits(stream_out.tuser_vendor);
+
+    localparam SEG_TDATA_WIDTH = TDATA_WIDTH / NUM_OF_SEG;
+    localparam SEG_TKEEP_WIDTH = TKEEP_WIDTH / NUM_OF_SEG;
 
     // Optional skid buffer on source stream
     pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W(IN_TUSER_WIDTH)) stream(clk, rst_n);
@@ -245,4 +288,4 @@ module ofs_fim_pcie_ss_rx_seg_align
     ofs_fim_axis_pipeline
       to_sink (.clk, .rst_n, .axis_s(work_out), .axis_m(stream_out));
 
-endmodule // ofs_fim_pcie_ss_rx_seg_align
+endmodule // ofs_fim_pcie_ss_rx_seg_align_impl

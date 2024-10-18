@@ -113,55 +113,78 @@ module ofs_fim_pcie_ss_ib2sb
     // Record the previous data in case it is needed later.
     logic [TDATA_WIDTH-1:0] prev_payload;
     logic [(TDATA_WIDTH/8)-1:0] prev_keep;
-    always_ff @(posedge clk)
+    if (DATA_AFTER_HDR_WIDTH != 0)
     begin
-        if (process_drain)
+        always_ff @(posedge clk)
         begin
-            prev_must_drain <= 1'b0;
-        end
-        if (process_msg)
-        begin
-            prev_payload <= source.tdata;
-            prev_keep <= source.tkeep;
-            // Either there is data that won't fit in this beat or the data+header
-            // is a single beat.
-            prev_must_drain <= source.tlast &&
-                               (source.tkeep[HDR_TKEEP_WIDTH] || source_sop);
-        end
+            if (process_drain)
+            begin
+                prev_must_drain <= 1'b0;
+            end
+            if (process_msg)
+            begin
+                prev_payload <= source.tdata;
+                prev_keep <= source.tkeep;
+                // Either there is data that won't fit in this beat or the data+header
+                // is a single beat.
+                prev_must_drain <= source.tlast &&
+                                   (source.tkeep[HDR_TKEEP_WIDTH] || source_sop);
+            end
 
-        if (!rst_n)
-        begin
-            prev_must_drain <= 1'b0;
+            if (!rst_n)
+            begin
+                prev_must_drain <= 1'b0;
+            end
         end
+    end
+    else
+    begin
+        // The data bus is only the width of a header. The prev_payload buffer will
+        // never be needed.
+        assign prev_must_drain = 1'b0;
     end
 
     // Continuation of multi-cycle data?
     logic payload_is_pure_data;
     assign payload_is_pure_data = !source_sop;
 
-    assign data_stream.tvalid = (process_msg && payload_is_pure_data) || process_drain;
-
-    always_comb
+    if (DATA_AFTER_HDR_WIDTH != 0)
     begin
-        data_stream.tlast = (source.tlast && !source.tkeep[HDR_TKEEP_WIDTH]) ||
-                            prev_must_drain;
-        data_stream.tuser_vendor = '0;
-
-        // Realign data - low part from previous flit, high part from current
-        data_stream.tdata =
-            { source.tdata[0 +: HDR_WIDTH],
-              prev_payload[HDR_WIDTH +: DATA_AFTER_HDR_WIDTH] };
-        data_stream.tkeep =
-            { source.tkeep[0 +: HDR_TKEEP_WIDTH],
-              prev_keep[HDR_TKEEP_WIDTH +: DATA_AFTER_HDR_TKEEP_WIDTH] };
-
-        if (prev_must_drain)
+        // Bus is wider than one header. Data from multiple cycles must be combined.
+        always_comb
         begin
-            data_stream.tdata[DATA_AFTER_HDR_WIDTH +: HDR_WIDTH] = '0;
-            data_stream.tkeep[DATA_AFTER_HDR_TKEEP_WIDTH +: HDR_TKEEP_WIDTH] = '0;
+            data_stream.tvalid = (process_msg && payload_is_pure_data) || process_drain;
+            data_stream.tlast = (source.tlast && !source.tkeep[HDR_TKEEP_WIDTH]) ||
+                                prev_must_drain;
+            data_stream.tuser_vendor = '0;
+
+            // Realign data - low part from previous flit, high part from current
+            data_stream.tdata = { source.tdata[0 +: HDR_WIDTH],
+                                  prev_payload[HDR_WIDTH +: DATA_AFTER_HDR_WIDTH] };
+            data_stream.tkeep = { source.tkeep[0 +: HDR_TKEEP_WIDTH],
+                                  prev_keep[HDR_TKEEP_WIDTH +: DATA_AFTER_HDR_TKEEP_WIDTH] };
+
+            if (prev_must_drain)
+            begin
+                data_stream.tdata[DATA_AFTER_HDR_WIDTH +: HDR_WIDTH] = '0;
+                data_stream.tkeep[DATA_AFTER_HDR_TKEEP_WIDTH +: HDR_TKEEP_WIDTH] = '0;
+            end
         end
     end
+    else
+    begin
+        // Bus is only the width of a header. Data will come directly from the
+        // incoming stream. Special case only for headers without data.
+        always_comb
+        begin
+            data_stream.tvalid = process_msg && (!source_sop || source.tlast);
+            data_stream.tlast = source.tlast;
+            data_stream.tuser_vendor = '0;
 
+            data_stream.tdata = !source_sop ? source.tdata : '0;
+            data_stream.tkeep = !source_sop ? source.tkeep : '0;
+        end
+    end
 
     // ====================================================================
     //
