@@ -134,6 +134,11 @@ module ase_afu_main_emul
 
         parameter t_ase_link_emul_rtable LINK_EMUL_PFVF_ROUTING_TABLE = gen_ase_link_emul_rtable();
 
+        pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) tx_a_if [NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
+        pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) rx_a_if [NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
+        pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) tx_b_if [NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
+        pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) rx_b_if [NUM_LINKS-1:0](.clk(pClk),.rst_n(~softReset));
+
         pf_vf_mux_w_params
           #(
             .MUX_NAME("ASE_LINK_EMUL_A"),
@@ -147,8 +152,8 @@ module ase_afu_main_emul
             .rst_n(~softReset),
             .ho2mx_rx_port(afu_axi_rx_a_if),
             .mx2ho_tx_port(afu_axi_tx_a_if),
-            .mx2fn_rx_port(link_rx_a_if),
-            .fn2mx_tx_port(link_tx_a_if),
+            .mx2fn_rx_port(rx_a_if),
+            .fn2mx_tx_port(tx_a_if),
             .out_fifo_err(),
             .out_fifo_perr()
             );
@@ -166,11 +171,114 @@ module ase_afu_main_emul
             .rst_n(~softReset),
             .ho2mx_rx_port(afu_axi_rx_b_if),
             .mx2ho_tx_port(afu_axi_tx_b_if),
-            .mx2fn_rx_port(link_rx_b_if),
-            .fn2mx_tx_port(link_tx_b_if),
+            .mx2fn_rx_port(rx_b_if),
+            .fn2mx_tx_port(tx_b_if),
             .out_fifo_err(),
             .out_fifo_perr()
             );
+
+
+        //
+        // ASE emulates multiple links as a single link, using VFs to represent
+        // functions across all links. The MUX above breaks the ASE emulated VFs
+        // into separate link ports: rx_a_if, tx_a_if, etc.
+        //
+        // The code below maps the VFs on the ports going to afu_main() so that
+        // they match the VF numbering seen on HW. This mapping moves each link's
+        // VF numbering into the range 0:NUM_PORTS-1.
+        //
+
+        logic rx_a_sop[NUM_LINKS];
+        logic tx_a_sop[NUM_LINKS];
+        logic rx_b_sop[NUM_LINKS];
+        logic tx_b_sop[NUM_LINKS];
+
+        localparam HDR_WIDTH = $bits(pcie_ss_hdr_pkg::PCIe_PUHdr_t);
+        pcie_ss_hdr_pkg::PCIe_PUHdr_t rx_a_hdr[NUM_LINKS];
+        pcie_ss_hdr_pkg::PCIe_PUHdr_t tx_a_hdr[NUM_LINKS];
+        pcie_ss_hdr_pkg::PCIe_PUHdr_t rx_b_hdr[NUM_LINKS];
+        pcie_ss_hdr_pkg::PCIe_PUHdr_t tx_b_hdr[NUM_LINKS];
+
+        for (genvar link = 0; link < NUM_LINKS; link = link + 1) begin: mux_link
+            // Track SOP for each channel
+            always_ff @(posedge pClk)
+            begin
+                if (rx_a_if[link].tvalid && rx_a_if[link].tready)
+                    rx_a_sop[link] <= rx_a_if[link].tlast;
+                if (tx_a_if[link].tvalid && tx_a_if[link].tready)
+                    tx_a_sop[link] <= tx_a_if[link].tlast;
+
+                if (rx_b_if[link].tvalid && rx_b_if[link].tready)
+                    rx_b_sop[link] <= rx_b_if[link].tlast;
+                if (tx_b_if[link].tvalid && tx_b_if[link].tready)
+                    tx_b_sop[link] <= tx_b_if[link].tlast;
+
+                if (softReset)
+                begin
+                    rx_a_sop[link] <= 1'b1;
+                    tx_a_sop[link] <= 1'b1;
+                    rx_b_sop[link] <= 1'b1;
+                    tx_b_sop[link] <= 1'b1;
+                end
+            end
+
+            // Map the vf_num field in each header between the ASE linear space
+            // and the per-link afu_main() space.
+            always_comb
+            begin
+                rx_a_hdr[link] = pcie_ss_hdr_pkg::PCIe_PUHdr_t'(rx_a_if[link].tdata);
+                rx_a_hdr[link].vf_num = rx_a_hdr[link].vf_num % NUM_PORTS;
+
+                tx_a_hdr[link] = pcie_ss_hdr_pkg::PCIe_PUHdr_t'(link_tx_a_if[link].tdata);
+                tx_a_hdr[link].vf_num = tx_a_hdr[link].vf_num + (NUM_PORTS * link);
+
+                rx_b_hdr[link] = pcie_ss_hdr_pkg::PCIe_PUHdr_t'(rx_b_if[link].tdata);
+                rx_b_hdr[link].vf_num = rx_b_hdr[link].vf_num % NUM_PORTS;
+
+                tx_b_hdr[link] = pcie_ss_hdr_pkg::PCIe_PUHdr_t'(link_tx_b_if[link].tdata);
+                tx_b_hdr[link].vf_num = tx_b_hdr[link].vf_num + (NUM_PORTS * link);
+            end
+
+            // Replace headers with updated vf_num in each channel
+            always_comb
+            begin
+                rx_a_if[link].tready = link_rx_a_if[link].tready;
+                link_rx_a_if[link].tvalid = rx_a_if[link].tvalid;
+                link_rx_a_if[link].tlast = rx_a_if[link].tlast;
+                link_rx_a_if[link].tuser_vendor = rx_a_if[link].tuser_vendor;
+                link_rx_a_if[link].tdata = rx_a_if[link].tdata;
+                link_rx_a_if[link].tkeep = rx_a_if[link].tkeep;
+                if (rx_a_sop[link])
+                    link_rx_a_if[link].tdata[HDR_WIDTH-1:0] = rx_a_hdr[link];
+
+                link_tx_a_if[link].tready = tx_a_if[link].tready;
+                tx_a_if[link].tvalid = link_tx_a_if[link].tvalid;
+                tx_a_if[link].tlast = link_tx_a_if[link].tlast;
+                tx_a_if[link].tuser_vendor = link_tx_a_if[link].tuser_vendor;
+                tx_a_if[link].tdata = link_tx_a_if[link].tdata;
+                tx_a_if[link].tkeep = link_tx_a_if[link].tkeep;
+                if (tx_a_sop[link])
+                    tx_a_if[link].tdata[HDR_WIDTH-1:0] = tx_a_hdr[link];
+
+                rx_b_if[link].tready = link_rx_b_if[link].tready;
+                link_rx_b_if[link].tvalid = rx_b_if[link].tvalid;
+                link_rx_b_if[link].tlast = rx_b_if[link].tlast;
+                link_rx_b_if[link].tuser_vendor = rx_b_if[link].tuser_vendor;
+                link_rx_b_if[link].tdata = rx_b_if[link].tdata;
+                link_rx_b_if[link].tkeep = rx_b_if[link].tkeep;
+                if (rx_b_sop[link])
+                    link_rx_b_if[link].tdata[HDR_WIDTH-1:0] = rx_b_hdr[link];
+
+                link_tx_b_if[link].tready = tx_b_if[link].tready;
+                tx_b_if[link].tvalid = link_tx_b_if[link].tvalid;
+                tx_b_if[link].tlast = link_tx_b_if[link].tlast;
+                tx_b_if[link].tuser_vendor = link_tx_b_if[link].tuser_vendor;
+                tx_b_if[link].tdata = link_tx_b_if[link].tdata;
+                tx_b_if[link].tkeep = link_tx_b_if[link].tkeep;
+                if (tx_b_sop[link])
+                    tx_b_if[link].tdata[HDR_WIDTH-1:0] = tx_b_hdr[link];
+            end
+        end
     end
 
 
@@ -355,8 +463,7 @@ module ase_afu_main_emul
         .MAX_ETH_CH(NUM_ETH_CH),
 
         .PG_NUM_RTABLE_ENTRIES(NUM_PORTS),
-        .PG_PFVF_ROUTING_TABLE(PG_PFVF_ROUTING_TABLE),
-        .LINK_NUM_FROM_PORT_INFO(1)
+        .PG_PFVF_ROUTING_TABLE(PG_PFVF_ROUTING_TABLE)
       ) afu_main (
         .clk(pClk),
         .clk_div2(pClkDiv2),
