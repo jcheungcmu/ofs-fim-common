@@ -73,7 +73,7 @@ module mem_ss_tg (
 		.RW_LOOP_COUNT_WIDTH                   (32),
 		.AMM_CFG_ADDR_WIDTH                    (10),
 		.RW_RPT_COUNT_WIDTH                    (16),
-		.RW_OPERATION_COUNT_WIDTH              (12),
+		.RW_OPERATION_COUNT_WIDTH              (16),
 		.MEGAFUNC_DEVICE_FAMILY                ("FALCONMESA"),
 		.NUM_OF_CTRL_PORTS                     (1),
 		.CTRL_AVL_PROTOCOL_ENUM                (""),

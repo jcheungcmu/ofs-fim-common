@@ -13083,7 +13083,7 @@
         <ipxact:parameter parameterId="RW_OPERATION_COUNT_WIDTH" type="int">
           <ipxact:name>RW_OPERATION_COUNT_WIDTH</ipxact:name>
           <ipxact:displayName>PARAM_RW_OPERATION_COUNT_WIDTH_NAME</ipxact:displayName>
-          <ipxact:value>12</ipxact:value>
+          <ipxact:value>16</ipxact:value>
         </ipxact:parameter>
       </ipxact:parameters>
     </altera:altera_module_parameters>
