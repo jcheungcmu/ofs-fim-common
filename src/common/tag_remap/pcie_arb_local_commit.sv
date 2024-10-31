@@ -23,9 +23,6 @@
 //-----------------------------------------------------------------------------
 
 module pcie_arb_local_commit #(
-   parameter TDATA_WIDTH = ofs_pcie_ss_cfg_pkg::TDATA_WIDTH,
-   parameter TUSER_WIDTH = ofs_pcie_ss_cfg_pkg::TUSER_WIDTH,
-
    // Generate a commit when this TUSER bit is set. Ignored
    // when the parameter is zero.
    parameter TUSER_STORE_COMMIT_REQ_BIT = ofs_pcie_ss_cfg_pkg::TUSER_STORE_COMMIT_REQ_BIT
@@ -40,7 +37,10 @@ module pcie_arb_local_commit #(
 
    import pcie_ss_hdr_pkg::*;
 
-   pcie_ss_axis_if commit_in(clk, rst_n);
+   localparam TDATA_WIDTH = commit.DATA_W;
+   localparam TUSER_WIDTH = commit.USER_W;
+
+   pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) commit_in(clk, rst_n);
    logic sink_sop;
 
    // Commit messages are only generated on tlast
@@ -143,7 +143,7 @@ module pcie_arb_local_commit #(
    // The completion header is derived from the first beat of a write request,
    // but returned to the AFU on the last write beat.
    PCIe_CplHdr_t rx_cmp_hdr, rx_cmp_hdr_reg;
-   logic [$bits(commit_in.tuser_vendor)-1 : 0] rx_cmp_tuser_reg;
+   logic [TUSER_WIDTH-1 : 0] rx_cmp_tuser_reg;
    logic rx_cmp_hdr_reg_valid;
 
    always_comb

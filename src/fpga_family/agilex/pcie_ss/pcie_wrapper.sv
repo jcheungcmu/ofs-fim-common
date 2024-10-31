@@ -74,6 +74,26 @@ import ofs_fim_pcie_hdr_def::*;
    input  pcie_ss_axis_pkg::t_axis_pcie_flr    axi_st_flr_rsp[PCIE_NUM_LINKS-1:0]
 );  
 
+// AXI-S data width at the PCIe IP boundary. The FIM might be
+// configured with a wider bus.
+localparam PCIE_SS_TDATA_WIDTH = `OFS_FIM_IP_CFG_PCIE_SS_DWIDTH_BYTE * 8;
+
+// PCIe IP boundary data width, though minimum width is set to
+// a full header. A full header is the minimum width supported
+// by the shims between here and the PCIe IP. If necessary, the
+// AXI-S width will be reduced from a header to a narrower bus
+// closer to the PCIe IP.
+localparam NATIVE_TDATA_WIDTH = (PCIE_SS_TDATA_WIDTH > pcie_ss_hdr_pkg::HDR_WIDTH) ?
+                                  PCIE_SS_TDATA_WIDTH : pcie_ss_hdr_pkg::HDR_WIDTH;
+localparam NATIVE_TXREQ_WIDTH = pcie_ss_hdr_pkg::HDR_WIDTH;
+localparam TUSER_WIDTH = ofs_fim_cfg_pkg::PCIE_TUSER_WIDTH;
+
+// PCIe IP native width AXI-S interfaces. The module AXI-S interfaces
+// will be mapped to these.
+pcie_ss_axis_if #(.DATA_W(NATIVE_TXREQ_WIDTH), .USER_W(TUSER_WIDTH)) axi_st_txreq_if_native[PCIE_NUM_LINKS-1:0] (.clk(fim_clk), .rst_n(fim_rst_n));
+pcie_ss_axis_if #(.DATA_W(NATIVE_TDATA_WIDTH), .USER_W(TUSER_WIDTH)) axi_st_rxreq_if_native[PCIE_NUM_LINKS-1:0] (.clk(fim_clk), .rst_n(fim_rst_n));
+pcie_ss_axis_if #(.DATA_W(NATIVE_TDATA_WIDTH), .USER_W(TUSER_WIDTH)) axi_st_rx_if_native[PCIE_NUM_LINKS-1:0] (.clk(fim_clk), .rst_n(fim_rst_n));
+pcie_ss_axis_if #(.DATA_W(NATIVE_TDATA_WIDTH), .USER_W(TUSER_WIDTH)) axi_st_tx_if_native[PCIE_NUM_LINKS-1:0] (.clk(fim_clk), .rst_n(fim_rst_n));
 
 // Link[0] has access to CSR space
 t_axis_pcie         axis_tx[PCIE_NUM_LINKS-1:0];
@@ -83,14 +103,14 @@ logic [PCIE_NUM_LINKS-1:0]   pcie_linkup;
 logic [31:0]        pcie_rx_err_code[PCIE_NUM_LINKS-1:0];
 
 pcie_ss_axis_if #(
-            .DATA_W(ofs_fim_cfg_pkg::PCIE_TDATA_WIDTH),
-            .USER_W(ofs_fim_cfg_pkg::PCIE_TUSER_WIDTH)
+            .DATA_W(NATIVE_TDATA_WIDTH),
+            .USER_W(TUSER_WIDTH)
     ) rxreq_in[PCIE_NUM_LINKS-1:0](.clk(fim_clk));
 
        
 pcie_ss_axis_if #(
-            .DATA_W(ofs_fim_cfg_pkg::PCIE_TDATA_WIDTH),
-            .USER_W(ofs_fim_cfg_pkg::PCIE_TUSER_WIDTH)
+            .DATA_W(NATIVE_TDATA_WIDTH),
+            .USER_W(TUSER_WIDTH)
     ) axi_st_tx_committed[PCIE_NUM_LINKS-1:0](.clk(fim_clk));
 
 
@@ -102,22 +122,30 @@ t_sideband_from_pcie   pcie_p2c_sideband[PCIE_NUM_LINKS-1:0];
 generate
     for (genvar j=0; j<PCIE_NUM_LINKS; j++) begin : PCIE_LINKS
  
-        pcie_ss_axis_if #(
-            .DATA_W(ofs_fim_cfg_pkg::PCIE_TDATA_WIDTH),
-            .USER_W(ofs_fim_cfg_pkg::PCIE_TUSER_WIDTH)
-            ) rxreq_arb_in[2](.clk(fim_clk), .rst_n(fim_rst_n[j]));
+        // Adjust bus width between FIM and PCIe IP, done mainly when the native
+        // bus is very narrow and the FIM requires something wider. When the
+        // FIM and native sizes are the same the connections will just be wired
+        // together.
+        ofs_fim_pcie_bus_widen rx_if_widen (.i_narrow_if(axi_st_rx_if_native[j]), .o_wide_if(axi_st_rx_if[j]));
+        ofs_fim_pcie_bus_widen rxreq_if_widen (.i_narrow_if(axi_st_rxreq_if_native[j]), .o_wide_if(axi_st_rxreq_if[j]));
+        ofs_fim_pcie_bus_narrow tx_if_narrow (.i_wide_if(axi_st_tx_if[j]), .o_narrow_if(axi_st_tx_if_native[j]));
+        ofs_fim_pcie_bus_narrow txreq_if_narrow (.i_wide_if(axi_st_txreq_if[j]), .o_narrow_if(axi_st_txreq_if_native[j]));
 
+        pcie_ss_axis_if #(
+            .DATA_W(NATIVE_TDATA_WIDTH),
+            .USER_W(TUSER_WIDTH)
+            ) rxreq_arb_in[2](.clk(fim_clk), .rst_n(fim_rst_n[j]));
        
         always_comb 
         begin
             // axis tx intf
-            axis_tx[j].tvalid = axi_st_tx_if[j].tvalid;
-            axis_tx[j].tdata  = axi_st_tx_if[j].tdata;
-            axis_tx[j].tkeep  = axi_st_tx_if[j].tkeep;
-            axis_tx[j].tlast  = axi_st_tx_if[j].tlast;
-            axis_tx[j].tuser  = axi_st_tx_if[j].tuser_vendor;
+            axis_tx[j].tvalid = axi_st_tx_if_native[j].tvalid;
+            axis_tx[j].tdata  = axi_st_tx_if_native[j].tdata;
+            axis_tx[j].tkeep  = axi_st_tx_if_native[j].tkeep;
+            axis_tx[j].tlast  = axi_st_tx_if_native[j].tlast;
+            axis_tx[j].tuser  = axi_st_tx_if_native[j].tuser_vendor;
 
-            axis_tx_tready[j] = axi_st_tx_if[j].tready;
+            axis_tx_tready[j] = axi_st_tx_if_native[j].tready;
 
             // clk & rst of links
             //axi_st_tx_committed[j].clk   = fim_clk;
@@ -180,19 +208,21 @@ generate
         (
             .clk    ( fim_clk       ),
             .rst_n  ( fim_rst_n     ),
-            .sink   ( axi_st_tx_if[j]  ),
+            .sink   ( axi_st_tx_if_native[j]  ),
             .source ( axi_st_tx_committed[j] ),
             .commit ( rxreq_arb_in[1] )
         );
 
         // Combine the write commit stream and RXREQ toward the AFU.
         pcie_ss_axis_mux #(
-            .NUM_CH ( 2 )
+            .NUM_CH ( 2 ),
+            .TDATA_WIDTH ( NATIVE_TDATA_WIDTH ),
+            .TUSER_WIDTH ( TUSER_WIDTH )
         ) ho2mx_rxreq_mux (
             .clk    ( fim_clk       ),
             .rst_n  ( fim_rst_n[j]  ),
             .sink   ( rxreq_arb_in  ),
-            .source ( axi_st_rxreq_if[j] )
+            .source ( axi_st_rxreq_if_native[j] )
         );
 
         ofs_fim_pcie_ss_tag_mode ofs_fim_pcie_ss_tag_mode (
@@ -209,9 +239,9 @@ generate
            .fim_clk                    (fim_clk),
            .fim_rst_n                  (fim_rst_n[j]),
            .axi_st_rxreq_if            (axi_st_rxreq_if[j]), 
-           .axi_st_rx_if               (axi_st_rx_if[j]),    
-           .axi_st_tx_if               (axi_st_tx_if[j]),    
-           .axi_st_txreq_if            (axi_st_txreq_if[j]) 
+           .axi_st_rx_if               (axi_st_rx_if_native[j]),    
+           .axi_st_tx_if               (axi_st_tx_if_native[j]),    
+           .axi_st_txreq_if            (axi_st_txreq_if_native[j]) 
         
         );
 
@@ -254,11 +284,11 @@ localparam MODE_IS_DM = SOC_ATTACH ? SOC_PCIE_MODE_IS_DM : PCIE_MODE_IS_DM;
    .pin_pcie_in_perst_n         (pin_pcie_in_perst_n), \
    .pin_pcie_rx_p               (pin_pcie_rx_p), \
    .pin_pcie_rx_n               (pin_pcie_rx_n), \
-   .axi_st_txreq_if             (axi_st_txreq_if), \
+   .axi_st_txreq_if             (axi_st_txreq_if_native), \
    .axi_st_rxreq_if             (rxreq_in), \
    .ss_app_st_ctrlshadow_tvalid (ss_app_st_ctrlshadow_tvalid), \
    .ss_app_st_ctrlshadow_tdata  (ss_app_st_ctrlshadow_tdata), \
-   .axi_st_rx_if                (axi_st_rx_if), \
+   .axi_st_rx_if                (axi_st_rx_if_native), \
    .axi_st_tx_if                (axi_st_tx_committed), \
    .ss_csr_lite_if              (ss_csr_lite_if), \
    .flr_req_if                  (axi_st_flr_req), \

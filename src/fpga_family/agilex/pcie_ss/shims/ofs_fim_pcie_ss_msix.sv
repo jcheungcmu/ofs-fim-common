@@ -131,6 +131,13 @@ module ofs_fim_pcie_ss_msix
     end
     // synthesis translate_on
 
+    // Map MSI-X streams to the proper width. The width is guaranteed to be at
+    // least as wide as a header. If the width is just the header -- not enough
+    // to also hold a payload -- set the data bus twice as wide and map it
+    // down to the true bus width on exit from this MSI-X module.
+    localparam MSIX_TDATA_WIDTH =
+        (axi_st_tx_out.DATA_W == pcie_ss_hdr_pkg::HDR_WIDTH) ? 2 * axi_st_tx_out.DATA_W :
+                                                               axi_st_tx_out.DATA_W;
 
     logic msix_rst_req;
     logic msix_rst_done;
@@ -144,19 +151,28 @@ module ofs_fim_pcie_ss_msix
     //
     // ====================================================================
 
+    // Map rxreq_in to a bus that is at least wide enough for header and 64 bit write
+    // payload in the same cycle.
+    pcie_ss_axis_if #(.DATA_W(MSIX_TDATA_WIDTH), .USER_W(axi_st_rxreq_in.USER_W))
+        rxreq_in(.clk, .rst_n);
+    pcie_ss_axis_if #(.DATA_W(MSIX_TDATA_WIDTH), .USER_W(axi_st_rxreq_in.USER_W))
+        rxreq_out(.clk, .rst_n);
+
+    ofs_fim_pcie_bus_widen msix_rx_widen (.i_narrow_if(axi_st_rxreq_in), .o_wide_if(rxreq_in));
+
     logic rxreq_sop;
     logic intc_rx_st_ready;
 
     always_ff @(posedge clk) begin
-        if (axi_st_rxreq_in.tvalid && axi_st_rxreq_in.tready)
-            rxreq_sop <= axi_st_rxreq_in.tlast;
+        if (rxreq_in.tvalid && rxreq_in.tready)
+            rxreq_sop <= rxreq_in.tlast;
 
         if (!rst_n)
             rxreq_sop <= 1'b1;
     end
 
     pcie_ss_hdr_pkg::PCIe_PUReqHdr_t rxreq_hdr;
-    assign rxreq_hdr = pcie_ss_hdr_pkg::PCIe_PUReqHdr_t'(axi_st_rxreq_in.tdata);
+    assign rxreq_hdr = pcie_ss_hdr_pkg::PCIe_PUReqHdr_t'(rxreq_in.tdata);
     // Address when request is 32 bit mode
     wire [MSIX_BAR_LOG2_SIZE-1:0] rxreq_addr32 = MSIX_BAR_LOG2_SIZE'(rxreq_hdr.host_addr_h);
     // Address when request is 64 bit mode
@@ -181,14 +197,17 @@ module ofs_fim_pcie_ss_msix
            rxreq_addr_is_msix;
 
     // Not an MSI-X request. For MSI-X requests, see the intc_rx_st_* ports below.
-    assign axi_st_rxreq_out.tvalid = axi_st_rxreq_in.tvalid && !rxreq_hdr_is_msix;
-    assign axi_st_rxreq_out.tlast = axi_st_rxreq_in.tlast;
-    assign axi_st_rxreq_out.tuser_vendor = axi_st_rxreq_in.tuser_vendor;
-    assign axi_st_rxreq_out.tdata = axi_st_rxreq_in.tdata;
-    assign axi_st_rxreq_out.tkeep = axi_st_rxreq_in.tkeep;
+    assign rxreq_out.tvalid = rxreq_in.tvalid && !rxreq_hdr_is_msix;
+    assign rxreq_out.tlast = rxreq_in.tlast;
+    assign rxreq_out.tuser_vendor = rxreq_in.tuser_vendor;
+    assign rxreq_out.tdata = rxreq_in.tdata;
+    assign rxreq_out.tkeep = rxreq_in.tkeep;
 
-    assign axi_st_rxreq_in.tready = rxreq_hdr_is_msix ? intc_rx_st_ready && msix_ready :
-                                                        axi_st_rxreq_out.tready;
+    assign rxreq_in.tready = rxreq_hdr_is_msix ? intc_rx_st_ready && msix_ready :
+                                                 rxreq_out.tready;
+
+    // rxreq out to FIM, mapped back to the native width
+    ofs_fim_pcie_bus_narrow msix_rx_narrow (.i_wide_if(rxreq_out), .o_narrow_if(axi_st_rxreq_out));
 
 
     // ====================================================================
@@ -198,15 +217,24 @@ module ofs_fim_pcie_ss_msix
     //
     // ====================================================================
 
+    // Map tx_in to a bus that is at least wide enough for header and 64 bit write
+    // payload in the same cycle.
+    pcie_ss_axis_if #(.DATA_W(MSIX_TDATA_WIDTH), .USER_W(axi_st_tx_in.USER_W))
+        tx_in_wide(.clk, .rst_n);
+    pcie_ss_axis_if #(.DATA_W(MSIX_TDATA_WIDTH), .USER_W(axi_st_tx_in.USER_W))
+        tx_out_wide(.clk, .rst_n);
+
+    ofs_fim_pcie_bus_widen tx_widen (.i_narrow_if(axi_st_tx_in), .o_wide_if(tx_in_wide));
+
     pcie_ss_hdr_pkg::PCIe_IntrHdr_t tx_hdr;
-    assign tx_hdr = pcie_ss_hdr_pkg::PCIe_IntrHdr_t'(axi_st_tx_in.tdata);
+    assign tx_hdr = pcie_ss_hdr_pkg::PCIe_IntrHdr_t'(tx_in_wide.tdata);
 
     logic tx_sop;
     logic msix_st_tx_tready;
 
     always_ff @(posedge clk) begin
-        if (axi_st_tx_in.tvalid && axi_st_tx_in.tready)
-            tx_sop <= axi_st_tx_in.tlast;
+        if (tx_in_wide.tvalid && tx_in_wide.tready)
+            tx_sop <= tx_in_wide.tlast;
 
         if (!rst_n)
             tx_sop <= 1'b1;
@@ -215,20 +243,22 @@ module ofs_fim_pcie_ss_msix
     wire tx_hdr_is_interrupt =
            tx_sop &&
            pcie_ss_hdr_pkg::func_is_interrupt_req(tx_hdr.fmt_type) &&
-           pcie_ss_hdr_pkg::func_hdr_is_dm_mode(axi_st_tx_in.tuser_vendor);
+           pcie_ss_hdr_pkg::func_hdr_is_dm_mode(tx_in_wide.tuser_vendor);
 
     // Multiplex FIM TX traffic and MSI-X completions/interrupts
     pcie_ss_axis_if #(.DATA_W(axi_st_tx_out.DATA_W), .USER_W(axi_st_tx_out.USER_W))
-        tx_mux_in[2](.clk, .rst_n);
+        tx_mux[2](.clk, .rst_n);
     
-    assign tx_mux_in[0].tvalid = axi_st_tx_in.tvalid && !tx_hdr_is_interrupt;
-    assign tx_mux_in[0].tlast = axi_st_tx_in.tlast;
-    assign tx_mux_in[0].tuser_vendor = axi_st_tx_in.tuser_vendor;
-    assign tx_mux_in[0].tdata = axi_st_tx_in.tdata;
-    assign tx_mux_in[0].tkeep = axi_st_tx_in.tkeep;
+    assign tx_out_wide.tvalid = tx_in_wide.tvalid && !tx_hdr_is_interrupt;
+    assign tx_out_wide.tlast = tx_in_wide.tlast;
+    assign tx_out_wide.tuser_vendor = tx_in_wide.tuser_vendor;
+    assign tx_out_wide.tdata = tx_in_wide.tdata;
+    assign tx_out_wide.tkeep = tx_in_wide.tkeep;
 
-    assign axi_st_tx_in.tready = tx_hdr_is_interrupt ? msix_st_tx_tready && msix_ready :
-                                                       tx_mux_in[0].tready;
+    assign tx_in_wide.tready = tx_hdr_is_interrupt ? msix_st_tx_tready && msix_ready :
+                                                     tx_out_wide.tready;
+
+    ofs_fim_pcie_bus_narrow tx_narrow (.i_wide_if(tx_out_wide), .o_narrow_if(tx_mux[0]));
 
     pcie_ss_axis_mux
       #(
@@ -237,11 +267,11 @@ module ofs_fim_pcie_ss_msix
         .TDATA_WIDTH(axi_st_tx_out.DATA_W),
         .TUSER_WIDTH(axi_st_tx_out.USER_W)
         )
-      tx_mux
+      tx_axis_mux
        (
         .clk,
         .rst_n,
-        .sink(tx_mux_in),
+        .sink(tx_mux),
         .source(axi_st_tx_out)
         );
 
@@ -268,16 +298,22 @@ module ofs_fim_pcie_ss_msix
     logic [63:0] intc_st_tx_data;
     wire intc_st_tx_tready = !msix_tx_tvalid && !intc_st_cpl_tx_tvalid;
 
-    assign tx_mux_in[1].tvalid = msix_tx_tvalid;
-    assign tx_mux_in[1].tlast = 1'b1;
-    assign tx_mux_in[1].tuser_vendor = '0;
-    assign tx_mux_in[1].tdata = { msix_tx_data, msix_tx_hdr };
-    assign tx_mux_in[1].tkeep = { '0, {8{1'b1}}, {($bits(msix_tx_hdr)/8){1'b1}} };
+    pcie_ss_axis_if #(.DATA_W(MSIX_TDATA_WIDTH), .USER_W(axi_st_tx_out.USER_W))
+        msix_tx(.clk, .rst_n);
+
+    assign msix_tx.tvalid = msix_tx_tvalid;
+    assign msix_tx.tlast = 1'b1;
+    assign msix_tx.tuser_vendor = '0;
+    assign msix_tx.tdata = { '0, msix_tx_data, msix_tx_hdr };
+    assign msix_tx.tkeep = { '0, {8{1'b1}}, {($bits(msix_tx_hdr)/8){1'b1}} };
+
+    // Reduce the msix_tx bus to the native width
+    ofs_fim_pcie_bus_narrow msix_tx_narrow (.i_wide_if(msix_tx), .o_narrow_if(tx_mux[1]));
 
     always_ff @(posedge clk) begin
         if (msix_tx_tvalid) begin
             // Existing message transmitted?
-            msix_tx_tvalid <= !tx_mux_in[1].tready;
+            msix_tx_tvalid <= !msix_tx.tready;
         end else begin
             // New TX message from MSI-X table?
             msix_tx_tvalid <= intc_st_cpl_tx_tvalid || intc_st_tx_tvalid;
@@ -344,10 +380,10 @@ module ofs_fim_pcie_ss_msix
 
         // Host MMIO requests
         .intc_rx_st_ready,
-        .intc_rx_st_valid(axi_st_rxreq_in.tvalid && rxreq_hdr_is_msix && msix_ready),
+        .intc_rx_st_valid(rxreq_in.tvalid && rxreq_hdr_is_msix && msix_ready),
         .intc_rx_st_msix_size_valid((rxreq_hdr.length == 1) || (rxreq_hdr.length == 2)),
         .intc_rx_st_sop(1'b1),
-        .intc_rx_st_data(axi_st_rxreq_in.tdata[$bits(rxreq_hdr) +: 64]),
+        .intc_rx_st_data(rxreq_in.tdata[$bits(rxreq_hdr) +: 64]),
         .intc_rx_st_hdr(128'(rxreq_hdr)),
         .intc_rx_st_pvalid(rxreq_hdr.pref_present),
         .intc_rx_st_prefix({ 2'b0, rxreq_hdr.pref_present, rxreq_hdr.pref_type, rxreq_hdr.pref }),
@@ -395,8 +431,8 @@ module ofs_fim_pcie_ss_msix
         .st_txreq_tdata('0),
 
         // AFU interrupts on TX stream
-        .st_tx_tdata(axi_st_tx_in.tdata[255:0]),
-        .st_tx_tvalid(axi_st_tx_in.tvalid && tx_hdr_is_interrupt && msix_ready),
+        .st_tx_tdata(tx_in_wide.tdata[255:0]),
+        .st_tx_tvalid(tx_in_wide.tvalid && tx_hdr_is_interrupt && msix_ready),
         .st_tx_tready(msix_st_tx_tready),
 
         // Host MMIO read response

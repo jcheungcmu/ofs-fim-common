@@ -10,6 +10,9 @@ set PCIE_SHIMS_DIR [file dirname [info script]]
 
 set_global_assignment -name SYSTEMVERILOG_FILE "${PCIE_SHIMS_DIR}/pcie_ats/ofs_fim_pcie_ats_inval_cpl.sv"
 
+set_global_assignment -name SYSTEMVERILOG_FILE "${PCIE_SHIMS_DIR}/pcie_bus_width/ofs_fim_pcie_bus_narrow.sv"
+set_global_assignment -name SYSTEMVERILOG_FILE "${PCIE_SHIMS_DIR}/pcie_bus_width/ofs_fim_pcie_bus_widen.sv"
+
 set_global_assignment -name SYSTEMVERILOG_FILE "${PCIE_SHIMS_DIR}/pcie_dm_req_splitter/ofs_fim_pcie_dm_cpl_merge.sv"
 set_global_assignment -name SYSTEMVERILOG_FILE "${PCIE_SHIMS_DIR}/pcie_dm_req_splitter/ofs_fim_pcie_dm_req_splitter.sv"
 set_global_assignment -name SYSTEMVERILOG_FILE "${PCIE_SHIMS_DIR}/pcie_dm_req_splitter/ofs_fim_pcie_dm_rx_rd_splitter.sv"

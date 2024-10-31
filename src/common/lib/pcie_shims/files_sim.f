@@ -4,6 +4,9 @@
 
 pcie_ats/ofs_fim_pcie_ats_inval_cpl.sv
 
+pcie_bus_width/ofs_fim_pcie_bus_narrow.sv
+pcie_bus_width/ofs_fim_pcie_bus_widen.sv
+
 pcie_dm_req_splitter/ofs_fim_pcie_dm_cpl_merge.sv
 pcie_dm_req_splitter/ofs_fim_pcie_dm_req_splitter.sv
 pcie_dm_req_splitter/ofs_fim_pcie_dm_rx_rd_splitter.sv
