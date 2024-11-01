@@ -126,10 +126,10 @@ generate
         // bus is very narrow and the FIM requires something wider. When the
         // FIM and native sizes are the same the connections will just be wired
         // together.
-        ofs_fim_pcie_bus_widen rx_if_widen (.i_narrow_if(axi_st_rx_if_native[j]), .o_wide_if(axi_st_rx_if[j]));
-        ofs_fim_pcie_bus_widen rxreq_if_widen (.i_narrow_if(axi_st_rxreq_if_native[j]), .o_wide_if(axi_st_rxreq_if[j]));
-        ofs_fim_pcie_bus_narrow tx_if_narrow (.i_wide_if(axi_st_tx_if[j]), .o_narrow_if(axi_st_tx_if_native[j]));
-        ofs_fim_pcie_bus_narrow txreq_if_narrow (.i_wide_if(axi_st_txreq_if[j]), .o_narrow_if(axi_st_txreq_if_native[j]));
+        ofs_fim_pcie_bus_width rx_if_width (.i_if(axi_st_rx_if_native[j]), .o_if(axi_st_rx_if[j]));
+        ofs_fim_pcie_bus_width rxreq_if_width (.i_if(axi_st_rxreq_if_native[j]), .o_if(axi_st_rxreq_if[j]));
+        ofs_fim_pcie_bus_width tx_if_width (.i_if(axi_st_tx_if[j]), .o_if(axi_st_tx_if_native[j]));
+        ofs_fim_pcie_bus_width txreq_if_width (.i_if(axi_st_txreq_if[j]), .o_if(axi_st_txreq_if_native[j]));
 
         pcie_ss_axis_if #(
             .DATA_W(NATIVE_TDATA_WIDTH),
