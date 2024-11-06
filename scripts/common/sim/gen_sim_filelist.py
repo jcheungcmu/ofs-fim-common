@@ -16,10 +16,11 @@ import subprocess
 
 class IPSimInfo:
     ''' IP simulation script info '''
-    def __init__(self, ip_sim_path, ip_inst, sim_script):
+    def __init__(self, ip_sim_path, ip_inst, sim_script, sim_extract_script):
         self.ip_sim_path = ip_sim_path
         self.ip_inst = ip_inst
         self.sim_script = sim_script
+        self.sim_extract_script = sim_extract_script
 
     def get_ip_sim_path(self):
         ''' Return ip_sim_path '''
@@ -32,6 +33,10 @@ class IPSimInfo:
     def get_sim_script(self):
         ''' Return IP sim script '''
         return self.sim_script
+
+    def get_sim_extract_script(self):
+        ''' Return IP sim extraction script '''
+        return self.sim_extract_script
 
 
 def parse_arguments():
@@ -108,15 +113,34 @@ def gen_vcs_script(
             print("gen_sim_filelist.py: gen_vcs_script: rel_sim_path=%s" % rel_sim_path)
 
             vcs_script = full_sim_path + "/common/vcs_files.tcl"
-
-            sim_info = IPSimInfo(
-                rel_sim_path,
-                qsys,
-                vcs_script
-            )
+            vcsmx_script = full_sim_path + "/common/vcsmx_files.tcl"
 
             if os.path.exists(vcs_script):
                 print("gen_sim_filelist.py: gen_vcs_script: Reading file list of %s" % qsys)
+
+                sim_info = IPSimInfo(
+                    rel_sim_path,
+                    qsys,
+                    vcs_script,
+                    "get_vcs_files.tcl"
+                )
+
+                gen_vcs_filelist(
+                      sim_info,
+                      rom_lines,
+                      ip_list,
+                      file_lines
+                )
+            elif os.path.exists(vcsmx_script):
+                print("gen_sim_filelist.py: gen_vcsmx_script: Reading file list of %s" % qsys)
+
+                sim_info = IPSimInfo(
+                    rel_sim_path,
+                    qsys,
+                    vcsmx_script,
+                    "get_vcsmx_files.tcl"
+                )
+
                 gen_vcs_filelist(
                       sim_info,
                       rom_lines,
@@ -132,7 +156,8 @@ def gen_vcs_script(
                 sim_info = IPSimInfo(
                     rel_sim_path,
                     "NULL",
-                    vcs_script
+                    vcs_script,
+                    None
                 )
 
                 gen_old_ip_vcs_filelist(
@@ -169,11 +194,12 @@ def gen_vcs_filelist(
 
     try:
         subprocess.check_output(
-            'tclsh %s/get_vcs_files.tcl %s %s'
-            % (script_path, sim_info.get_ip_inst(), sim_info.get_sim_script()),
+            'tclsh %s/%s %s %s'
+            % (script_path, sim_info.get_sim_extract_script(),
+               sim_info.get_ip_inst(), sim_info.get_sim_script()),
             shell=True)
     except subprocess.CalledProcessError as grepexc:
-        print ("Error: tclsh get_vcs_files.tcl FAILED with error : ",
+        print ("Error: tclsh %s FAILED with error : " % (sim_info.get_sim_extract_script()),
                grepexc.returncode,
                grepexc.output)
         sys.exit(1)
@@ -437,7 +463,7 @@ def gen_msim_script(
             full_sim_path = os.environ['OFS_ROOTDIR'] + "/" + rel_sim_path
             msim_script = full_sim_path + "/common/modelsim_files.tcl"
 
-            sim_info = IPSimInfo(rel_sim_path, qsys, msim_script)
+            sim_info = IPSimInfo(rel_sim_path, qsys, msim_script, "get_msim_files.tcl")
 
             if os.path.exists(msim_script):
                 print("gen_sim_filelist.py: gen_msim_script: Reading file list of %s" % qsys)
@@ -452,7 +478,7 @@ def gen_msim_script(
                       "(IP generated from older version of Quartus)" % qsys)
 
                 msim_script = full_sim_path + "/mentor/msim_setup.tcl"
-                sim_info = IPSimInfo(rel_sim_path, "NULL", msim_script)
+                sim_info = IPSimInfo(rel_sim_path, "NULL", msim_script, None)
 
                 gen_old_ip_msim_filelist(
                       sim_info,
@@ -635,8 +661,9 @@ def gen_msim_filelist(
 
     try:
         subprocess.check_output(
-              'tclsh %s/get_msim_files.tcl %s %s'
-              % (script_path, sim_info.get_ip_inst(), sim_info.get_sim_script()),
+              'tclsh %s/%s %s %s'
+              % (script_path, sim_info.get_sim_extract_script(),
+                 sim_info.get_ip_inst(), sim_info.get_sim_script()),
               shell=True
         )
     except subprocess.CalledProcessError as grepexc:
