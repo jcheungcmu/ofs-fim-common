@@ -43,13 +43,7 @@ import ofs_fim_pcie_hdr_def::*;
    output logic [PCIE_NUM_LINKS-1:0]    subsystem_warm_rst_ack_n,
    
    // PCIe pins
-   input  logic                     pin_pcie_refclk0_p,
-   input  logic                     pin_pcie_refclk1_p,
-   input  logic                     pin_pcie_in_perst_n,   // connected to HIP
-   input  logic [PCIE_LANES-1:0]    pin_pcie_rx_p,
-   input  logic [PCIE_LANES-1:0]    pin_pcie_rx_n,
-   output logic [PCIE_LANES-1:0]    pin_pcie_tx_p,
-   output logic [PCIE_LANES-1:0]    pin_pcie_tx_n,
+   ofs_fim_pcie_ss_pins_if.pcie_ss  pin_pcie,
 
    // Ctrl Shadow ports
    output logic [PCIE_NUM_LINKS-1:0]                     ss_app_st_ctrlshadow_tvalid,
@@ -279,11 +273,7 @@ localparam MODE_IS_DM = SOC_ATTACH ? SOC_PCIE_MODE_IS_DM : PCIE_MODE_IS_DM;
    .subsystem_warm_rst_n        (subsystem_warm_rst_n), \
    .subsystem_cold_rst_ack_n    (subsystem_cold_rst_ack_n), \
    .subsystem_warm_rst_ack_n    (subsystem_warm_rst_ack_n), \
-   .pin_pcie_refclk0_p          (pin_pcie_refclk0_p), \
-   .pin_pcie_refclk1_p          (pin_pcie_refclk1_p), \
-   .pin_pcie_in_perst_n         (pin_pcie_in_perst_n), \
-   .pin_pcie_rx_p               (pin_pcie_rx_p), \
-   .pin_pcie_rx_n               (pin_pcie_rx_n), \
+   .pin_pcie                    (pin_pcie), \
    .axi_st_txreq_if             (axi_st_txreq_if_native), \
    .axi_st_rxreq_if             (rxreq_in), \
    .ss_app_st_ctrlshadow_tvalid (ss_app_st_ctrlshadow_tvalid), \
@@ -294,8 +284,6 @@ localparam MODE_IS_DM = SOC_ATTACH ? SOC_PCIE_MODE_IS_DM : PCIE_MODE_IS_DM;
    .flr_req_if                  (axi_st_flr_req), \
    .flr_rsp_if                  (axi_st_flr_rsp), \
    .reset_status                (reset_status), \
-   .pin_pcie_tx_p               (pin_pcie_tx_p), \
-   .pin_pcie_tx_n               (pin_pcie_tx_n), \
    .cpl_timeout_if              (axis_cpl_timeout), \
    .pcie_p2c_sideband           (pcie_p2c_sideband) \
 

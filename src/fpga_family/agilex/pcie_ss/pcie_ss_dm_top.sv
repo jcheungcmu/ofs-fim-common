@@ -35,13 +35,7 @@ module pcie_ss_dm_top # (
    output logic [PCIE_NUM_LINKS-1:0] subsystem_warm_rst_ack_n,
 
    // PCIe pins
-   input  logic                     pin_pcie_refclk0_p,
-   input  logic                     pin_pcie_refclk1_p,
-   input  logic                     pin_pcie_in_perst_n,   // connected to HIP
-   input  logic [PCIE_LANES-1:0]    pin_pcie_rx_p,
-   input  logic [PCIE_LANES-1:0]    pin_pcie_rx_n,
-   output logic [PCIE_LANES-1:0]    pin_pcie_tx_p,
-   output logic [PCIE_LANES-1:0]    pin_pcie_tx_n,
+   ofs_fim_pcie_ss_pins_if.pcie_ss  pin_pcie,
 
    //TXREQ ports
    pcie_ss_axis_if.sink             axi_st_txreq_if[PCIE_NUM_LINKS-1:0],
@@ -226,9 +220,9 @@ wire p1_initiate_warmrst_req;
 // by the preprocessor for either host or SoC configurations. (See
 // the ifdefs below that embed SS_NAME.)
 `define PCIE_SS_DM_PORTS(SS_NAME) \
-    .refclk0                        (pin_pcie_refclk0_p             ), \
-    .refclk1                        (pin_pcie_refclk1_p             ), \
-    .pin_perst_n                    (pin_pcie_in_perst_n            ), \
+    .refclk0                        (pin_pcie.refclk0_p             ), \
+    .refclk1                        (pin_pcie.refclk1_p             ), \
+    .pin_perst_n                    (pin_pcie.in_perst_n            ), \
     .coreclkout_hip_toapp           (coreclkout_hip                 ), \
     .p0_pin_perst_n                 (                               ), \
     .p0_reset_status_n              (reset_status_n[0]              ), \
@@ -434,70 +428,70 @@ wire p1_initiate_warmrst_req;
    `endif /* !`ifdef OFS_FIM_IP_CFG_``SS_NAME``_EN_LINK_1 */           \
   `endif /* `ifdef OFS_FIM_IP_CFG_``SS_NAME``_NUM_PHYS_LINKS_IS_2 */   \
                                                                        \
-    .tx_n_out0                      (pin_pcie_tx_n[0]               ), \
-    .tx_n_out1                      (pin_pcie_tx_n[1]               ), \
-    .tx_n_out2                      (pin_pcie_tx_n[2]               ), \
-    .tx_n_out3                      (pin_pcie_tx_n[3]               ), \
-    .tx_n_out4                      (pin_pcie_tx_n[4]               ), \
-    .tx_n_out5                      (pin_pcie_tx_n[5]               ), \
-    .tx_n_out6                      (pin_pcie_tx_n[6]               ), \
-    .tx_n_out7                      (pin_pcie_tx_n[7]               ), \
-    .tx_n_out8                      (pin_pcie_tx_n[8]               ), \
-    .tx_n_out9                      (pin_pcie_tx_n[9]               ), \
-    .tx_n_out10                     (pin_pcie_tx_n[10]              ), \
-    .tx_n_out11                     (pin_pcie_tx_n[11]              ), \
-    .tx_n_out12                     (pin_pcie_tx_n[12]              ), \
-    .tx_n_out13                     (pin_pcie_tx_n[13]              ), \
-    .tx_n_out14                     (pin_pcie_tx_n[14]              ), \
-    .tx_n_out15                     (pin_pcie_tx_n[15]              ), \
-    .tx_p_out0                      (pin_pcie_tx_p[0]               ), \
-    .tx_p_out1                      (pin_pcie_tx_p[1]               ), \
-    .tx_p_out2                      (pin_pcie_tx_p[2]               ), \
-    .tx_p_out3                      (pin_pcie_tx_p[3]               ), \
-    .tx_p_out4                      (pin_pcie_tx_p[4]               ), \
-    .tx_p_out5                      (pin_pcie_tx_p[5]               ), \
-    .tx_p_out6                      (pin_pcie_tx_p[6]               ), \
-    .tx_p_out7                      (pin_pcie_tx_p[7]               ), \
-    .tx_p_out8                      (pin_pcie_tx_p[8]               ), \
-    .tx_p_out9                      (pin_pcie_tx_p[9]               ), \
-    .tx_p_out10                     (pin_pcie_tx_p[10]              ), \
-    .tx_p_out11                     (pin_pcie_tx_p[11]              ), \
-    .tx_p_out12                     (pin_pcie_tx_p[12]              ), \
-    .tx_p_out13                     (pin_pcie_tx_p[13]              ), \
-    .tx_p_out14                     (pin_pcie_tx_p[14]              ), \
-    .tx_p_out15                     (pin_pcie_tx_p[15]              ), \
-    .rx_n_in0                       (pin_pcie_rx_n[0]               ), \
-    .rx_n_in1                       (pin_pcie_rx_n[1]               ), \
-    .rx_n_in2                       (pin_pcie_rx_n[2]               ), \
-    .rx_n_in3                       (pin_pcie_rx_n[3]               ), \
-    .rx_n_in4                       (pin_pcie_rx_n[4]               ), \
-    .rx_n_in5                       (pin_pcie_rx_n[5]               ), \
-    .rx_n_in6                       (pin_pcie_rx_n[6]               ), \
-    .rx_n_in7                       (pin_pcie_rx_n[7]               ), \
-    .rx_n_in8                       (pin_pcie_rx_n[8]               ), \
-    .rx_n_in9                       (pin_pcie_rx_n[9]               ), \
-    .rx_n_in10                      (pin_pcie_rx_n[10]              ), \
-    .rx_n_in11                      (pin_pcie_rx_n[11]              ), \
-    .rx_n_in12                      (pin_pcie_rx_n[12]              ), \
-    .rx_n_in13                      (pin_pcie_rx_n[13]              ), \
-    .rx_n_in14                      (pin_pcie_rx_n[14]              ), \
-    .rx_n_in15                      (pin_pcie_rx_n[15]              ), \
-    .rx_p_in0                       (pin_pcie_rx_p[0]               ), \
-    .rx_p_in1                       (pin_pcie_rx_p[1]               ), \
-    .rx_p_in2                       (pin_pcie_rx_p[2]               ), \
-    .rx_p_in3                       (pin_pcie_rx_p[3]               ), \
-    .rx_p_in4                       (pin_pcie_rx_p[4]               ), \
-    .rx_p_in5                       (pin_pcie_rx_p[5]               ), \
-    .rx_p_in6                       (pin_pcie_rx_p[6]               ), \
-    .rx_p_in7                       (pin_pcie_rx_p[7]               ), \
-    .rx_p_in8                       (pin_pcie_rx_p[8]               ), \
-    .rx_p_in9                       (pin_pcie_rx_p[9]               ), \
-    .rx_p_in10                      (pin_pcie_rx_p[10]              ), \
-    .rx_p_in11                      (pin_pcie_rx_p[11]              ), \
-    .rx_p_in12                      (pin_pcie_rx_p[12]              ), \
-    .rx_p_in13                      (pin_pcie_rx_p[13]              ), \
-    .rx_p_in14                      (pin_pcie_rx_p[14]              ), \
-    .rx_p_in15                      (pin_pcie_rx_p[15]              )  \
+    .tx_n_out0                      (pin_pcie.tx_n[0]               ), \
+    .tx_n_out1                      (pin_pcie.tx_n[1]               ), \
+    .tx_n_out2                      (pin_pcie.tx_n[2]               ), \
+    .tx_n_out3                      (pin_pcie.tx_n[3]               ), \
+    .tx_n_out4                      (pin_pcie.tx_n[4]               ), \
+    .tx_n_out5                      (pin_pcie.tx_n[5]               ), \
+    .tx_n_out6                      (pin_pcie.tx_n[6]               ), \
+    .tx_n_out7                      (pin_pcie.tx_n[7]               ), \
+    .tx_n_out8                      (pin_pcie.tx_n[8]               ), \
+    .tx_n_out9                      (pin_pcie.tx_n[9]               ), \
+    .tx_n_out10                     (pin_pcie.tx_n[10]              ), \
+    .tx_n_out11                     (pin_pcie.tx_n[11]              ), \
+    .tx_n_out12                     (pin_pcie.tx_n[12]              ), \
+    .tx_n_out13                     (pin_pcie.tx_n[13]              ), \
+    .tx_n_out14                     (pin_pcie.tx_n[14]              ), \
+    .tx_n_out15                     (pin_pcie.tx_n[15]              ), \
+    .tx_p_out0                      (pin_pcie.tx_p[0]               ), \
+    .tx_p_out1                      (pin_pcie.tx_p[1]               ), \
+    .tx_p_out2                      (pin_pcie.tx_p[2]               ), \
+    .tx_p_out3                      (pin_pcie.tx_p[3]               ), \
+    .tx_p_out4                      (pin_pcie.tx_p[4]               ), \
+    .tx_p_out5                      (pin_pcie.tx_p[5]               ), \
+    .tx_p_out6                      (pin_pcie.tx_p[6]               ), \
+    .tx_p_out7                      (pin_pcie.tx_p[7]               ), \
+    .tx_p_out8                      (pin_pcie.tx_p[8]               ), \
+    .tx_p_out9                      (pin_pcie.tx_p[9]               ), \
+    .tx_p_out10                     (pin_pcie.tx_p[10]              ), \
+    .tx_p_out11                     (pin_pcie.tx_p[11]              ), \
+    .tx_p_out12                     (pin_pcie.tx_p[12]              ), \
+    .tx_p_out13                     (pin_pcie.tx_p[13]              ), \
+    .tx_p_out14                     (pin_pcie.tx_p[14]              ), \
+    .tx_p_out15                     (pin_pcie.tx_p[15]              ), \
+    .rx_n_in0                       (pin_pcie.rx_n[0]               ), \
+    .rx_n_in1                       (pin_pcie.rx_n[1]               ), \
+    .rx_n_in2                       (pin_pcie.rx_n[2]               ), \
+    .rx_n_in3                       (pin_pcie.rx_n[3]               ), \
+    .rx_n_in4                       (pin_pcie.rx_n[4]               ), \
+    .rx_n_in5                       (pin_pcie.rx_n[5]               ), \
+    .rx_n_in6                       (pin_pcie.rx_n[6]               ), \
+    .rx_n_in7                       (pin_pcie.rx_n[7]               ), \
+    .rx_n_in8                       (pin_pcie.rx_n[8]               ), \
+    .rx_n_in9                       (pin_pcie.rx_n[9]               ), \
+    .rx_n_in10                      (pin_pcie.rx_n[10]              ), \
+    .rx_n_in11                      (pin_pcie.rx_n[11]              ), \
+    .rx_n_in12                      (pin_pcie.rx_n[12]              ), \
+    .rx_n_in13                      (pin_pcie.rx_n[13]              ), \
+    .rx_n_in14                      (pin_pcie.rx_n[14]              ), \
+    .rx_n_in15                      (pin_pcie.rx_n[15]              ), \
+    .rx_p_in0                       (pin_pcie.rx_p[0]               ), \
+    .rx_p_in1                       (pin_pcie.rx_p[1]               ), \
+    .rx_p_in2                       (pin_pcie.rx_p[2]               ), \
+    .rx_p_in3                       (pin_pcie.rx_p[3]               ), \
+    .rx_p_in4                       (pin_pcie.rx_p[4]               ), \
+    .rx_p_in5                       (pin_pcie.rx_p[5]               ), \
+    .rx_p_in6                       (pin_pcie.rx_p[6]               ), \
+    .rx_p_in7                       (pin_pcie.rx_p[7]               ), \
+    .rx_p_in8                       (pin_pcie.rx_p[8]               ), \
+    .rx_p_in9                       (pin_pcie.rx_p[9]               ), \
+    .rx_p_in10                      (pin_pcie.rx_p[10]              ), \
+    .rx_p_in11                      (pin_pcie.rx_p[11]              ), \
+    .rx_p_in12                      (pin_pcie.rx_p[12]              ), \
+    .rx_p_in13                      (pin_pcie.rx_p[13]              ), \
+    .rx_p_in14                      (pin_pcie.rx_p[14]              ), \
+    .rx_p_in15                      (pin_pcie.rx_p[15]              )  \
 
 
 generate if (SOC_ATTACH == 0) begin : host_pcie
