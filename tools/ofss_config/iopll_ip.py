@@ -36,9 +36,9 @@ class IOPLL(OFS):
         Abort if violation. The PCIe IP may define a maximum frequency, but it varies
         by device so the Fmax checking is left to the downstream IP.
         """
-        if float(self.p_clk) < 250:
+        if float(self.p_clk) < 200:
             self._errorExit(
-                "!!IOPLL Config Error!! IOPLL p_clk should be above 250 MHz"
+                "!!IOPLL Config Error!! IOPLL p_clk should be above 200 MHz"
             )
 
     def get_ip_settings(self):

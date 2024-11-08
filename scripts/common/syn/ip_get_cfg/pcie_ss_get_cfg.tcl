@@ -84,7 +84,7 @@ proc emit_ip_cfg {ofile_name ip_name} {
             }
 
             # Extract the link width from top topology (GenA_LXW)
-            if { [regsub -all {.*X([0-9]+)$} $top_topology {\1} topology_link_width] == 0 } {
+            if { [regsub -all {.*X([0-9]+).*} $top_topology {\1} topology_link_width] == 0 } {
                 # Pattern match failed. Assume 16.
                 set topology_link_width 16
             }

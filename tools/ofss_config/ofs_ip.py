@@ -22,6 +22,7 @@ class OFS:
         Constructor containing info on the OFS design and corresponding IP
         """
         self.ofs_config = ofs_config
+        self.target = target
         self.platform = ""
         self.fpga_family = ""
         self.fim = ""
