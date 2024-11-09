@@ -163,7 +163,7 @@ fim_resync #(
    .q     (tg_timeout_csr)
 );
    
-logic [63:0]       clock_count[NUM_TG];
+logic [31:0]       clock_count[NUM_TG];
 
 mem_tg2_csr #(
    .NUM_TG     (NUM_TG)

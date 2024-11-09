@@ -17,7 +17,7 @@ module tg2_axi_mem (
    output tg_pass,
    output tg_fail,
    output tg_timeout,
-   output logic [63:0] clock_count,
+   output logic [31:0] clock_count,
                     
    // TG2 CSRs
    ofs_avmm_if.sink csr_cfg,

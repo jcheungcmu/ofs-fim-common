@@ -72,8 +72,13 @@ package ofs_fim_mem_if_pkg;
    localparam AXI_MEM_BURST_LEN_WIDTH = 8;
 `endif
    // TODO: Temporary
+`ifdef INCLUDE_HBM
    localparam NUM_HBM_DEVICES = 2;
-
+   localparam PER_HBM_ADDR_WIDTH = 34;  // 33 = 8GB; 34 = 16GB
+`else
+   localparam NUM_HBM_DEVICES = 0;
+   localparam PER_HBM_ADDR_WIDTH = 0;
+`endif
    // DDR4 PARAMS
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4
    localparam NUM_DDR4_CHANNELS       = `OFS_FIM_IP_CFG_LOCAL_MEM_NUM_DDR4_CHANNELS;

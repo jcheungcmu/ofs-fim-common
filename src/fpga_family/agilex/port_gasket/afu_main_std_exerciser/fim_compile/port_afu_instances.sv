@@ -109,7 +109,11 @@ localparam AR_REG_MODE   = SKID_BUFFER;
    `ifdef INCLUDE_LOCAL_MEM
    localparam AXIS_HEM_PID = 0;
    localparam AXIS_HLB_PID = -1;
-   localparam HE_MEM_CH = 1;
+    `ifdef INCLUDE_HBM
+    localparam HE_MEM_CH = 0;
+    `else
+    localparam HE_MEM_CH = 1;
+   `endif
    `else
    localparam AXIS_HEM_PID = -1;
    localparam AXIS_HLB_PID = 0;
@@ -258,6 +262,7 @@ generate
          );
       end : hlb_gen
 `ifdef INCLUDE_LOCAL_MEM
+ `ifndef INCLUDE_HBM
       else if(i == AXIS_HEM_PID) begin : hem_gen
          he_mem_top #(
             .PF_ID     (PORT_PF_VF_INFO[i].pf_num),
@@ -275,6 +280,7 @@ generate
             .ext_mem_if  (afu_ext_mem_if[HE_MEM_CH-1:0])
          );
       end : hem_gen
+ `endif
       else if (i == AXIS_MEM_TG_PID) begin : tg_gen
          mem_tg2_top #(
             .PF_ID     (PORT_PF_VF_INFO[i].pf_num),

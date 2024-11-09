@@ -16,6 +16,8 @@ package tg2_csr_pkg;
 import ofs_csr_pkg::*;
 
 localparam M_CHANNEL = ofs_fim_mem_if_pkg::NUM_MEM_CHANNELS;
+localparam NUM_HBM_DEVICES = ofs_fim_mem_if_pkg::NUM_HBM_DEVICES;
+localparam PER_HBM_ADDR_WIDTH = ofs_fim_mem_if_pkg::PER_HBM_ADDR_WIDTH;
    
 // AFU ID
 // From https://www.uuidgenerator.net/version1:
@@ -63,6 +65,8 @@ localparam AFU_RSVD        = 16'h0020; //04
 localparam SCRATCHPAD      = 16'h0028; //05
 localparam MEM_TG_CTRL     = 16'h0030; //06
 localparam MEM_TG_STAT     = 16'h0038; //07
+// 16'h0040 RESERVED for next 16 channel status
+localparam MEM_TG_FEAT     = 16'h0048; //09
 localparam MEM_TG_CLOCKS   = 16'h0050; //10
 // The TG2 registers are accessed starting at 16'h1000 for ch0, 16'h2000 for ch1, etc.
 localparam TG2_CH_BASE     = 16'h1000;
@@ -75,6 +79,7 @@ localparam AFU_ID_H_CSR_IDX    = AFU_ID_H_CSR>>CSR_ADDR_SHIFT;
 localparam AFU_NEXT_IDX        = AFU_NEXT>>CSR_ADDR_SHIFT;
 localparam AFU_RSVD_IDX        = AFU_RSVD>>CSR_ADDR_SHIFT;
 localparam SCRATCHPAD_IDX      = SCRATCHPAD>>CSR_ADDR_SHIFT;
+localparam MEM_TG_FEAT_IDX     = MEM_TG_FEAT>>CSR_ADDR_SHIFT;
 localparam MEM_TG_CTRL_IDX     = MEM_TG_CTRL>>CSR_ADDR_SHIFT;
 localparam MEM_TG_STAT_IDX     = MEM_TG_STAT>>CSR_ADDR_SHIFT;
 localparam MEM_TG_CLOCKS_IDX   = MEM_TG_CLOCKS>>CSR_ADDR_SHIFT;
@@ -124,6 +129,21 @@ typedef union packed {
 } afu_csr_afu_id_h_t;
 
 //---------------------------------------------------------
+// Memory traffic gen feature register
+//---------------------------------------------------------
+typedef struct packed {
+   logic [47:0] reserved; //...[63:16]
+   logic [3:0]  num_hbm_devices; //...[15:12]
+   logic [11:0] per_hbm_addr_width; //........[11:0]
+} csr_tg_feat_fields_t;
+
+typedef union packed {
+   csr_tg_feat_fields_t  csr_tg_feat;
+   logic [63:0]          data;
+   ofs_csr_reg_2x32_t    word;
+} csr_tg_feat_t;
+
+//---------------------------------------------------------
 // Memory traffic gen control register
 //---------------------------------------------------------
 typedef struct packed {
@@ -156,6 +176,20 @@ typedef union packed {
 //    logic [63:0]          data;
 //    ofs_csr_reg_2x32_t    word;
 // } csr_tg_stat_t;
+
+//---------------------------------------------------------
+// Memory traffic gen clock counter
+//---------------------------------------------------------
+typedef struct packed {
+   logic [31:0] reserved; //...[63:32]
+   logic [31:0] clock_count; //...[31:0]
+} csr_tg_clk_fields_t;
+
+typedef union packed {
+   csr_tg_clk_fields_t   csr_tg_clk;
+   logic [63:0]          data;
+   ofs_csr_reg_2x32_t    word;
+} csr_tg_clk_t;
 
 endpackage : tg2_csr_pkg
 `endif //  `ifndef __TG2_CSR_PKG_SV__

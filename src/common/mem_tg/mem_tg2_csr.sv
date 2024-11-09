@@ -19,7 +19,7 @@ module mem_tg2_csr #(
    input logic [NUM_TG-1:0]  tg_pass,
    input logic [NUM_TG-1:0]  tg_fail,
    input logic [NUM_TG-1:0]  tg_timeout,
-   input logic [63:0]        clock_count[NUM_TG],
+   input logic [31:0]        clock_count[NUM_TG],
 
 
    // interface to host
@@ -226,7 +226,7 @@ afu_csr_dfh_t afu_dfh;
 
 assign afu_dfh.afu_dfh.feature_type    = 4'h1;
 assign afu_dfh.afu_dfh.reserved1       = {8{1'b0}};
-assign afu_dfh.afu_dfh.afu_min_version = 3'h0;
+assign afu_dfh.afu_dfh.afu_min_version = 3'h1;
 assign afu_dfh.afu_dfh.reserved0       = {7{1'b0}};
 assign afu_dfh.afu_dfh.end_of_list     = END_OF_LIST;
 assign afu_dfh.afu_dfh.next_dfh_offset = NEXT_DFH_BYTE_OFFSET;
@@ -241,9 +241,26 @@ ofs_csr_reg_generic_t scratchpad_update;
 assign scratchpad_reset.data  = 64'h0000_0000_0000_0000;
 assign scratchpad_update.data = csr_if.writedata;
 
+`ifdef INCLUDE_HBM
+// TG Features
+csr_tg_feat_t mem_tg_feature;
+assign mem_tg_feature.csr_tg_feat.reserved            = {48{1'b0}};
+assign mem_tg_feature.csr_tg_feat.num_hbm_devices     = NUM_HBM_DEVICES;
+assign mem_tg_feature.csr_tg_feat.per_hbm_addr_width  = PER_HBM_ADDR_WIDTH;
+`endif
+
 // TG Control
 csr_tg_ctrl_t mem_tg_ctrl_update;
 assign mem_tg_ctrl_update.csr_tg_ctrl.tg_ctrl = { NUM_TG{1'b1} };
+
+// TG Clock counters
+csr_tg_clk_t mem_tg_clocks [0:NUM_TG-1];
+always_comb begin
+   for (int c = 0; c < NUM_TG; c++) begin
+      mem_tg_clocks[c].csr_tg_clk.reserved     = {32{1'b0}};
+      mem_tg_clocks[c].csr_tg_clk.clock_count  = clock_count[c];
+   end
+end
 
 always_comb begin
    hw_state.reset_n      = csr_if.rst_n;
@@ -268,7 +285,9 @@ always @(posedge csr_if.clk) begin : csr_upd
                               .reg_current_val (csr_reg[SCRATCHPAD_IDX]),
                               .write           (csr_write[SCRATCHPAD_IDX]),
                               .state           (hw_state) );
-
+`ifdef INCLUDE_HBM
+   csr_reg[MEM_TG_FEAT_IDX] <= mem_tg_feature.data;
+`endif   
    csr_reg[MEM_TG_CTRL_IDX] <= update_reg (
                                .attr            (TG_CTRL_ATTR),
                                .reg_reset_val   (mem_tg_ctrl_update.data),
@@ -286,7 +305,7 @@ always @(posedge csr_if.clk) begin : csr_upd
    csr_reg[MEM_TG_STAT_IDX+NUM_REG_TG_STATS-1] <= tg_stats[$bits(tg_stats)-1:64*(NUM_REG_TG_STATS-1)];
 
    for (int c = 0; c < NUM_TG; c++) begin
-      csr_reg[MEM_TG_CLOCKS_IDX+c] <= clock_count[c];
+      csr_reg[MEM_TG_CLOCKS_IDX+c] <= mem_tg_clocks[c];
       
       // Generate a write to TG_START for writes to TG_CTRL to support the legacy behavior
       tg_ctrl_start[c]             <= csr_write[MEM_TG_CTRL_IDX] & csr_reg[MEM_TG_CTRL_IDX][c] & hw_state.wr_data.data[c];
