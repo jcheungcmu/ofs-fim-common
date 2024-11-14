@@ -19,6 +19,10 @@ interface ofs_fim_pcie_ss_pins_if #(
     logic refclk0_p;
     logic refclk1_p;
     logic in_perst_n;
+
+    // GTS reset sequencer -- up to 2 wires connected to i_flux_clk in PCIe IP
+    logic [1:0] in_flux_clk;
+
     logic [PCIE_LANES-1:0] rx_p;
     logic [PCIE_LANES-1:0] rx_n;
     logic [PCIE_LANES-1:0] tx_p;
@@ -27,6 +31,7 @@ interface ofs_fim_pcie_ss_pins_if #(
     modport top (
         output refclk0_p, refclk1_p,
         output in_perst_n,
+        output in_flux_clk,
         output rx_p, rx_n,
         input  tx_p, tx_n
         );
@@ -34,6 +39,7 @@ interface ofs_fim_pcie_ss_pins_if #(
     modport pcie_ss (
         input  refclk0_p, refclk1_p,
         input  in_perst_n,
+        input  in_flux_clk,
         input  rx_p, rx_n,
         output tx_p, tx_n
         );

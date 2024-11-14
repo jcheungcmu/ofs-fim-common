@@ -143,6 +143,9 @@ proc emit_ip_cfg {ofile_name ip_name} {
     puts $of "`define OFS_FIM_IP_CFG_${ip_name}_NUM_PHYS_LINKS_IS_${topology_num_links} 1"
     puts $of "// Number of links used by the OFS FIM"
     puts $of "`define OFS_FIM_IP_CFG_${ip_name}_NUM_LINKS ${pcie_num_links}"
+    set total_num_lanes [expr $pcie_num_links * $topology_link_width]
+    puts $of "`define OFS_FIM_IP_CFG_${ip_name}_TOTAL_NUM_LANES ${total_num_lanes}"
+    puts $of "`define OFS_FIM_IP_CFG_${ip_name}_TOTAL_NUM_LANES_IS_${total_num_lanes} 1"
     for {set idx 0} { $idx < $pcie_num_links } {incr idx} {
         puts $of "`define OFS_FIM_IP_CFG_${ip_name}_EN_LINK_${idx} 1"
     }
@@ -181,7 +184,19 @@ proc emit_ip_cfg {ofile_name ip_name} {
 
     # Tiles have interface differences, such as tuser fields for side-band headers.
     # Generate macros indicating ports that are present.
+    puts $of ""
+    puts $of "// PCIe SS top-level interface ports"
     foreach p [lsort $interfaces] {
+        puts $of "`define OFS_FIM_IP_CFG_${ip_name}_HAS_[string toupper ${p}] 1"
+
+
+        #
+        # The macros below were the original ports checked by the script
+        # and mapped to names without the leading "p0_". At the time, the script
+        # didn't have the line above that emits a HAS macro for every interface.
+        # The macros below are kept to avoid breaking existing RTL.
+        #
+
         # All RX/TX TUSER ports, e.g. as OFS_FIM_IP_CFG_PCIE_SS_HAS_TX_TUSER_LAST_SEGMENT
         if { [regexp {p0_.*_st_([rt]x_tuser.*)} $p key port] } {
             puts $of "`define OFS_FIM_IP_CFG_${ip_name}_HAS_[string toupper ${port}] 1"

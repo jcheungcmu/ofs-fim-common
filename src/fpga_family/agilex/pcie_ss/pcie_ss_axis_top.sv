@@ -11,10 +11,6 @@
 
 `include "ofs_ip_cfg_db.vh"
 
-//import ofs_fim_cfg_pkg::*;
-//import ofs_fim_if_pkg::*;
-//import pcie_ss_axis_pkg::*;
-
 module pcie_ss_axis_top # (
    parameter PCIE_LANES = 16,
    parameter PCIE_NUM_LINKS = 1,
@@ -127,6 +123,7 @@ import ofs_fim_pcie_pkg::*;
 `SET_CFG_PARAM(HAS_TX_TUSER_LAST_SEGMENT);
 `SET_CFG_PARAM(ST_RX_HAS_TREADY);
 `SET_CFG_PARAM(HAS_RXCRDT);
+`SET_CFG_PARAM(HAS_P0_I_SYSPLL_C0_CLK);
 
 `SET_CFG_PARAM(NUM_PFS);
 `SET_CFG_PARAM(TOTAL_NUM_VFS);
@@ -584,10 +581,36 @@ for (genvar j=0; j<PCIE_NUM_LINKS; j++) begin : PCIE_LINK_CONN
 
 end //for (genvar j=0; j<PCIE_NUM_LINKS;..
 
+// GTS clock -- IP generated to match the PCIe configuration by OFSS
+logic systemclk_pll_lock;
+logic systemclk_c0;
+if (CFG_HAS_P0_I_SYSPLL_C0_CLK) begin : syspll
+    pcie_ss_systemclk_gts systemclk_gts (
+        .o_pll_lock(systemclk_pll_lock),
+        .o_syspll_c0(systemclk_c0),
+        .i_refclk(pin_pcie.refclk0_p)
+        );
+end
 
 //-------------------------------------
 // PCIe SS
 //-------------------------------------
+
+`ifdef OFS_FIM_IP_CFG_PCIE_SS_TOTAL_NUM_LANES_IS_8
+   `define PCIE_SS_NUM_LANES_GT_4 1
+`endif
+`ifdef OFS_FIM_IP_CFG_PCIE_SS_TOTAL_NUM_LANES_IS_16
+   `define PCIE_SS_NUM_LANES_GT_4 1
+   `define PCIE_SS_NUM_LANES_GT_8 1
+`endif
+
+`ifdef OFS_FIM_IP_CFG_SOC_PCIE_SS_TOTAL_NUM_LANES_IS_8
+   `define SOC_PCIE_SS_NUM_LANES_GT_4 1
+`endif
+`ifdef OFS_FIM_IP_CFG_SOC_PCIE_SS_TOTAL_NUM_LANES_IS_16
+   `define SOC_PCIE_SS_NUM_LANES_GT_4 1
+   `define SOC_PCIE_SS_NUM_LANES_GT_8 1
+`endif
 
 // Expand common arguments to the host and SoC instances from a macro.
 // They are the same. The argument to the macro is expanded recursively
@@ -595,13 +618,34 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
 // the ifdefs below that embed SS_NAME.)
 `define PCIE_SS_AXIS_PORTS(SS_NAME) \
     .refclk0                        (pin_pcie.refclk0_p             ), \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_REFCLK1                       \
     .refclk1                        (pin_pcie.refclk1_p             ), \
-    .pin_perst_n                    (pin_pcie.in_perst_n            ), \
+   `endif                                                              \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_I_FLUX_CLK                    \
+    .i_flux_clk                     (pin_pcie.in_flux_clk[0]        ), \
+   `endif                                                              \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_CORECLKOUT_HIP_TOAPP          \
     .coreclkout_hip_toapp           (coreclkout_hip                 ), \
+   `endif                                                              \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_P0_CORECLKOUT_HIP_TOAPP       \
+    .p0_coreclkout_hip_toapp        (coreclkout_hip                 ), \
+   `endif                                                              \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_PIN_PERST_N                   \
+    .pin_perst_n                    (pin_pcie.in_perst_n            ), \
+   `endif                                                              \
     .p0_pin_perst_n                 (                               ), \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_P0_PIN_PERST_N_I              \
+    .p0_pin_perst_n_i               (pin_pcie.in_perst_n            ), \
+    .p0_pin_perst_n_1_i             (                               ), \
+   `endif                                                              \
     .p0_reset_status_n              (reset_status_n[0]              ), \
-    .ninit_done                     (ninit_done                     ), \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_P0_I_SYSPLL_C0_CLK            \
+    .p0_i_syspll_c0_clk             (systemclk_c0                   ), \
+    .p0_i_ss_vccl_syspll_locked     (systemclk_pll_lock             ), \
+   `endif                                                              \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_DUMMY_USER_AVMM_RST           \
     .dummy_user_avmm_rst            (                               ), \
+   `endif                                                              \
     .p0_axi_st_clk                  (coreclkout_hip                 ), \
     .p0_axi_lite_clk                (csr_clk                        ), \
     .p0_axi_st_areset_n             (fim_rst_n[0]                   ), \
@@ -614,6 +658,9 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .p0_subsystem_rst_rdy           (                               ), \
     .p0_initiate_warmrst_req        (initiate_warmrst_req[0]        ), \
     .p0_initiate_rst_req_rdy        (initiate_warmrst_req[0]        ), \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_P0_APP_SS_ST_RX_TUSER_HALT    \
+    .p0_app_ss_st_rx_tuser_halt     ('0                             ), \
+   `endif                                                              \
     .p0_ss_app_st_rx_tvalid         (ss_app_st_rx_tvalid[0]         ), \
    `ifdef OFS_FIM_IP_CFG_``SS_NAME``_ST_RX_HAS_TREADY                  \
     .p0_app_ss_st_rx_tready         (app_ss_st_rx_tready[0]         ), \
@@ -705,6 +752,9 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .p1_subsystem_rst_rdy           (                               ), \
     .p1_initiate_warmrst_req        (initiate_warmrst_req[1]        ), \
     .p1_initiate_rst_req_rdy        (initiate_warmrst_req[1]        ), \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_P1_APP_SS_ST_RX_TUSER_HALT    \
+    .p1_app_ss_st_rx_tuser_halt     ('0                             ), \
+   `endif                                                              \
     .p1_ss_app_st_rx_tvalid         (ss_app_st_rx_tvalid[1]         ), \
    `ifdef OFS_FIM_IP_CFG_``SS_NAME``_ST_RX_HAS_TREADY                  \
     .p1_app_ss_st_rx_tready         (app_ss_st_rx_tready[1]         ), \
@@ -873,10 +923,13 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .tx_n_out1                      (pin_pcie.tx_n[1]               ), \
     .tx_n_out2                      (pin_pcie.tx_n[2]               ), \
     .tx_n_out3                      (pin_pcie.tx_n[3]               ), \
+   `ifdef ``SS_NAME``_NUM_LANES_GT_4                                  \
     .tx_n_out4                      (pin_pcie.tx_n[4]               ), \
     .tx_n_out5                      (pin_pcie.tx_n[5]               ), \
     .tx_n_out6                      (pin_pcie.tx_n[6]               ), \
     .tx_n_out7                      (pin_pcie.tx_n[7]               ), \
+   `endif                                                              \
+   `ifdef ``SS_NAME``_NUM_LANES_GT_8                                  \
     .tx_n_out8                      (pin_pcie.tx_n[8]               ), \
     .tx_n_out9                      (pin_pcie.tx_n[9]               ), \
     .tx_n_out10                     (pin_pcie.tx_n[10]              ), \
@@ -885,14 +938,18 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .tx_n_out13                     (pin_pcie.tx_n[13]              ), \
     .tx_n_out14                     (pin_pcie.tx_n[14]              ), \
     .tx_n_out15                     (pin_pcie.tx_n[15]              ), \
+   `endif                                                              \
     .tx_p_out0                      (pin_pcie.tx_p[0]               ), \
     .tx_p_out1                      (pin_pcie.tx_p[1]               ), \
     .tx_p_out2                      (pin_pcie.tx_p[2]               ), \
     .tx_p_out3                      (pin_pcie.tx_p[3]               ), \
+   `ifdef ``SS_NAME``_NUM_LANES_GT_4                                  \
     .tx_p_out4                      (pin_pcie.tx_p[4]               ), \
     .tx_p_out5                      (pin_pcie.tx_p[5]               ), \
     .tx_p_out6                      (pin_pcie.tx_p[6]               ), \
     .tx_p_out7                      (pin_pcie.tx_p[7]               ), \
+   `endif                                                              \
+   `ifdef ``SS_NAME``_NUM_LANES_GT_8                                  \
     .tx_p_out8                      (pin_pcie.tx_p[8]               ), \
     .tx_p_out9                      (pin_pcie.tx_p[9]               ), \
     .tx_p_out10                     (pin_pcie.tx_p[10]              ), \
@@ -901,14 +958,18 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .tx_p_out13                     (pin_pcie.tx_p[13]              ), \
     .tx_p_out14                     (pin_pcie.tx_p[14]              ), \
     .tx_p_out15                     (pin_pcie.tx_p[15]              ), \
+   `endif                                                              \
     .rx_n_in0                       (pin_pcie.rx_n[0]               ), \
     .rx_n_in1                       (pin_pcie.rx_n[1]               ), \
     .rx_n_in2                       (pin_pcie.rx_n[2]               ), \
     .rx_n_in3                       (pin_pcie.rx_n[3]               ), \
+   `ifdef ``SS_NAME``_NUM_LANES_GT_4                                  \
     .rx_n_in4                       (pin_pcie.rx_n[4]               ), \
     .rx_n_in5                       (pin_pcie.rx_n[5]               ), \
     .rx_n_in6                       (pin_pcie.rx_n[6]               ), \
     .rx_n_in7                       (pin_pcie.rx_n[7]               ), \
+   `endif                                                              \
+   `ifdef ``SS_NAME``_NUM_LANES_GT_8                                  \
     .rx_n_in8                       (pin_pcie.rx_n[8]               ), \
     .rx_n_in9                       (pin_pcie.rx_n[9]               ), \
     .rx_n_in10                      (pin_pcie.rx_n[10]              ), \
@@ -917,14 +978,18 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .rx_n_in13                      (pin_pcie.rx_n[13]              ), \
     .rx_n_in14                      (pin_pcie.rx_n[14]              ), \
     .rx_n_in15                      (pin_pcie.rx_n[15]              ), \
+   `endif                                                              \
     .rx_p_in0                       (pin_pcie.rx_p[0]               ), \
     .rx_p_in1                       (pin_pcie.rx_p[1]               ), \
     .rx_p_in2                       (pin_pcie.rx_p[2]               ), \
     .rx_p_in3                       (pin_pcie.rx_p[3]               ), \
+   `ifdef ``SS_NAME``_NUM_LANES_GT_4                                  \
     .rx_p_in4                       (pin_pcie.rx_p[4]               ), \
     .rx_p_in5                       (pin_pcie.rx_p[5]               ), \
     .rx_p_in6                       (pin_pcie.rx_p[6]               ), \
     .rx_p_in7                       (pin_pcie.rx_p[7]               ), \
+   `endif                                                              \
+   `ifdef ``SS_NAME``_NUM_LANES_GT_8                                  \
     .rx_p_in8                       (pin_pcie.rx_p[8]               ), \
     .rx_p_in9                       (pin_pcie.rx_p[9]               ), \
     .rx_p_in10                      (pin_pcie.rx_p[10]              ), \
@@ -932,7 +997,9 @@ end //for (genvar j=0; j<PCIE_NUM_LINKS;..
     .rx_p_in12                      (pin_pcie.rx_p[12]              ), \
     .rx_p_in13                      (pin_pcie.rx_p[13]              ), \
     .rx_p_in14                      (pin_pcie.rx_p[14]              ), \
-    .rx_p_in15                      (pin_pcie.rx_p[15]              )  \
+    .rx_p_in15                      (pin_pcie.rx_p[15]              ), \
+   `endif                                                              \
+    .ninit_done                     (ninit_done                     )  \
 
 
 generate if (SOC_ATTACH == 0) begin : host_pcie
@@ -940,26 +1007,56 @@ generate if (SOC_ATTACH == 0) begin : host_pcie
         `PCIE_SS_AXIS_PORTS(PCIE_SS)
     );
 
-   `ifndef OFS_FIM_IP_CFG_PCIE_SS_FLRCMPL_HAS_TREADY
-       assign ss_app_st_flrcmpl_tready = {PCIE_NUM_LINKS{1'b1}};
-   `endif
+  `ifndef OFS_FIM_IP_CFG_PCIE_SS_FLRCMPL_HAS_TREADY
+    assign ss_app_st_flrcmpl_tready = {PCIE_NUM_LINKS{1'b1}};
+  `endif
 
-   `ifndef OFS_FIM_IP_CFG_PCIE_SS_HAS_CEB
-       assign ss_app_st_cebreq_tvalid = {PCIE_NUM_LINKS{1'b0}};
-   `endif
+  `ifndef OFS_FIM_IP_CFG_PCIE_SS_HAS_CEB
+    assign ss_app_st_cebreq_tvalid = {PCIE_NUM_LINKS{1'b0}};
+  `endif
+
+    always_comb begin
+      `ifndef PCIE_SS_NUM_LANES_GT_4
+        if (PCIE_LANES >= 4) begin
+            pin_pcie.tx_p[PCIE_LANES-1:4] = '0;
+            pin_pcie.tx_n[PCIE_LANES-1:4] = '0;
+        end
+      `endif
+      `ifndef PCIE_SS_NUM_LANES_GT_8
+        if (PCIE_LANES >= 8) begin
+            pin_pcie.tx_p[PCIE_LANES-1:8] = '0;
+            pin_pcie.tx_n[PCIE_LANES-1:8] = '0;
+        end
+      `endif
+     end
 end
 else begin : soc_pcie
     soc_pcie_ss pcie_ss(
         `PCIE_SS_AXIS_PORTS(SOC_PCIE_SS)
     );
 
-   `ifndef OFS_FIM_IP_CFG_SOC_PCIE_SS_FLRCMPL_HAS_TREADY
-       assign ss_app_st_flrcmpl_tready = {PCIE_NUM_LINKS{1'b1}};
-   `endif
+  `ifndef OFS_FIM_IP_CFG_SOC_PCIE_SS_FLRCMPL_HAS_TREADY
+    assign ss_app_st_flrcmpl_tready = {PCIE_NUM_LINKS{1'b1}};
+  `endif
 
-   `ifndef OFS_FIM_IP_CFG_SOC_PCIE_SS_HAS_CEB
-       assign ss_app_st_cebreq_tvalid = {PCIE_NUM_LINKS{1'b0}};
-   `endif
+  `ifndef OFS_FIM_IP_CFG_SOC_PCIE_SS_HAS_CEB
+    assign ss_app_st_cebreq_tvalid = {PCIE_NUM_LINKS{1'b0}};
+  `endif
+
+    always_comb begin
+      `ifndef SOC_PCIE_SS_NUM_LANES_GT_4
+        if (PCIE_LANES >= 4) begin
+            pin_pcie.tx_p[PCIE_LANES-1:4] = '0;
+            pin_pcie.tx_n[PCIE_LANES-1:4] = '0;
+        end
+      `endif
+      `ifndef SOC_PCIE_SS_NUM_LANES_GT_8
+        if (PCIE_LANES >= 8) begin
+            pin_pcie.tx_p[PCIE_LANES-1:8] = '0;
+            pin_pcie.tx_n[PCIE_LANES-1:8] = '0;
+        end
+      `endif
+    end
 end
 endgenerate
 endmodule // pcie_ss_axis_top

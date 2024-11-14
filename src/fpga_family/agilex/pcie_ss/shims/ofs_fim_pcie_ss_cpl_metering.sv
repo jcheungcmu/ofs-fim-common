@@ -56,6 +56,8 @@ module ofs_fim_pcie_ss_cpl_metering
                 return 32;
             else
                 return 16;
+        end else if (TILE == "SM") begin
+            return 8;
         end else begin
             return -1;
         end
@@ -77,6 +79,8 @@ module ofs_fim_pcie_ss_cpl_metering
                 return 2016 * 2;
             else
                 return 2016;
+        end else if (TILE == "SM") begin
+            return 1730;
         end else begin
             return -1;
         end
@@ -97,6 +101,8 @@ module ofs_fim_pcie_ss_cpl_metering
                 return 1144;
             else
                 return 572;
+        end else if (TILE == "SM") begin
+            return 286;
         end else begin
             return -1;
         end

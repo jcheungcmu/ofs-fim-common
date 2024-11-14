@@ -163,7 +163,7 @@ if [ -v 3 ]; then
     FAMILY=$3
 elif [ -f "$QSF_FILE" ]; then
     # Some Quartus tools expect family in all lower case with no spaces
-    FAMILY=$(sed -n 's/^set_global_assignment -name FAMILY //p' $QSF_FILE | tr -d '"[:space:]' | tr '[:upper:]' '[:lower:]')
+    FAMILY=$(quartus_sh --tcl_eval get_part_info -family $DEVICE | tr -d '"{}[:space:]' | tr '[:upper:]' '[:lower:]')
 else
     echo "Error: No target family passed in to the script. "
     usage
@@ -209,10 +209,13 @@ if command -v vlogan &> /dev/null; then
     (cd "$QLIBS_DIR"/vcsmx
      quartus_sh --simlib_comp -family "$FAMILY" -tool vcsmx -language verilog -cmd_file ../vcsmx_cmd_file.sh -gen_only &> ../vcsmx.log
 
-     # F-Tile UVM PCIe/HSSI training depends on some preprocessor macros.
-     # Update the command file before running it.
      if $HAS_FTILE; then
+         # F-Tile UVM PCIe/HSSI training depends on some preprocessor macros.
+         # Update the command file before running it.
          sed -i -e 's/^vlogan /vlogan +define+IP7581SERDES_UX_SIMSPEED +define+TIMESCALE_EN +define+RTLSIM +define+INTC_FUNCTIONAL +define+SSM_SEQUENCE +define+SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SIMULATION +define+IP7581SERDES_UXS2T1R1PGD_PIPE_FAST_SIM +define+SRC_SPEC_SPEED_UP +define+__SRC_TEST__ /' ../vcsmx_cmd_file.sh
+     elif [[ "$FAMILY" =~ "agilex5" ]]; then
+         # Agilex 5 PCIe training macros
+         sed -i -e 's/^vlogan /vlogan +define+IP7581SERDES_UX_SIMSPEED /' ../vcsmx_cmd_file.sh
      fi
 
      # Parse the sources

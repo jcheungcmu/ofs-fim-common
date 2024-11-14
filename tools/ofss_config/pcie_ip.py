@@ -21,6 +21,7 @@ class PCIe(OFS):
         super().__init__(ofs_config, target)
         self.ip_type = "PCIe"
         self.pcie_config = pcie_config
+        self.preprocess_pcie_ofss_params()
         self.ip_component = pcie_config["settings"].get("ip_component",
                                                         "intel_pcie_ss_axi")
         self.ip_path = os.path.join(self.target_rootdir, "ipss", "pcie", "qip")
@@ -30,15 +31,27 @@ class PCIe(OFS):
         self.num_vfs = 0
         self.all_pfs = None
 
-        self.pcie_gen, self.pcie_instances = None, None
+        self.pcie_gen = None
         self.pcie_lane_width = None
         self.PCIE_AVAILABLE_LANES = 16
         self.pcie_instances = 1
         self.pcie_instances_enabled = 1
 
+        self.additional_ip = []
+
         self.PCIE_SS_PARAM = None
         self.set_ip_params()
-        self.preprocess_pcie_ofss_params()
+
+    def deploy(self):
+        """
+        Override the base OFS deploy() in order to deploy additional IP
+        required by some PCIe instances.
+        """
+        # Base PCIe SS IP
+        OFS.deploy(self)
+
+        for extra_ip in self.additional_ip:
+            extra_ip.deploy()
 
     def set_ip_params(self):
         param_default_path = os.path.join(
@@ -106,10 +119,6 @@ class PCIe(OFS):
                 )
 
         if self.pcie_gen is not None:
-            if self.pcie_gen not in ["4", "5"]:
-                self._errorExit(
-                    f"!!PCIe Config Error!! Currently only supporting PCIe Gen 4 or 5"
-                )
             if self.pcie_instances is None:
                 self._errorExit(
                     f"!!PCIe Config Error!! Must provide number of PCIe instances"
@@ -199,6 +208,15 @@ class PCIe(OFS):
             }
 
             self.num_pfs = len(self.all_pfs)
+            # Check whether IP limits the number of PFs to a lower value than usual
+            try:
+                if self.num_pfs > self.PCIE_SS_PARAM.max_num_pfs:
+                    self.num_pfs = self.PCIE_SS_PARAM.max_num_pfs
+                    self.all_pfs = self.all_pfs[0:self.num_pfs]
+                    print(f"\n *** Reducing num_pfs to {self.num_pfs} -- the maximum allowed by {self.ip_component} ***")
+            except:
+                None
+
             self.check_configuration()
 
             # If IOPLL OFSS is present to configuration the 'p_clk',
@@ -206,7 +224,15 @@ class PCIe(OFS):
             if self.p_clk and "axi_st_clk_freq_user_hwtcl" in self.ip_component_params:
                 self.ip_component_params["axi_st_clk_freq_user_hwtcl"] = f"{self.p_clk}MHz"
 
-            if self.pcie_gen is not None and self.pcie_instances is not None:
+            # Set top_topology_hwtcl
+            if hasattr(self.PCIE_SS_PARAM, 'set_top_topology'):
+                # The IP parameters module provides a procedure for setting the value.
+                self.ip_component_params["top_topology_hwtcl"] = \
+                    self.PCIE_SS_PARAM.set_top_topology(self.part, self.pcie_gen,
+                                                        self.pcie_instances,
+                                                        self.pcie_lane_width)
+            elif self.pcie_gen is not None and self.pcie_instances is not None:
+                # Default top_topology_hwtcl construction: "Gen<n> <num links>x<num lanes>"
                 self.ip_component_params["top_topology_hwtcl"] = f"Gen{self.pcie_gen} {self.pcie_instances}x{self.pcie_lane_width}"
 
             for pf in self.all_pfs:
@@ -241,6 +267,21 @@ class PCIe(OFS):
                     c8_k = 'core8' + c16_k[6:]
                     if not c8_k in self.ip_component_params:
                         self.ip_component_params[c8_k] = self.ip_component_params[c16_k]
+
+        if self.ip_component == "intel_pcie_gts":
+            self.append_gts_components()
+
+    def append_gts_components(self):
+        """
+        Generate GTS system clock required by the PCIe IP. The clock frequency
+        must match the PCIe configuration.
+        """
+        sysclk = PCIeOtherIP(self, "intel_systemclk_gts", "systemclk_gts")
+        sysclk.ip_component_params["syspll_use_case"] = "TRANSCEIVER_USE_CASE"
+        sysclk.ip_component_params["syspll_mod_0"] = "User PCIE-based Configuration"
+        sysclk.ip_component_params["syspll_freq_mhz_0"] = self.p_clk
+        sysclk.ip_component_params["refclk_xcvr_freq_mhz_0"] = "100.000000"
+        self.additional_ip.append(sysclk)
 
     def process_pfs(self, pf):
         """
@@ -301,3 +342,19 @@ class PCIe(OFS):
         logging.info(f"Total VF Count = {self.num_vfs}")
         logging.info(f"PF VF Mapping = {self.pf_vf_count}")
         logging.info("")
+
+
+class PCIeOtherIP(OFS):
+    """
+    Class used for deploying additional IP required by a PCIe subsystem instance.
+    """
+    def __init__(self, pcie_ip, ip_component, ip_output_suffix):
+        super().__init__(pcie_ip.ofs_config, pcie_ip.target)
+        self.ip_path = pcie_ip.ip_path
+        self.ip_output_name = f"{pcie_ip.ip_output_name}_{ip_output_suffix}"
+        self.ip_output_base = f"{self.ip_path}/{self.ip_output_name}"
+        self.ip_file = f"{self.ip_output_base}.ip"
+        self.ip_component = ip_component
+
+        self.artifacts_to_clean.append(self.ip_file)
+        self.artifacts_to_clean.append(self.ip_output_base)
