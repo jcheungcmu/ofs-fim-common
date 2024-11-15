@@ -5,7 +5,7 @@
 // Accept stream_in -- a packet stream where there may be multiple headers
 // and empty segments in a cycle.
 //
-// Both in-band and side-band headers are supported. 
+// Both in-band and side-band headers are supported.
 //
 // The input stream_in is separated into two output streams:
 //   - All completions with data are routed to stream_out_cpld.
@@ -116,7 +116,7 @@ module ofs_fim_pcie_ss_rx_dual_stream
             end else begin
                 // Continuing from the previous segment in the same cycle?
                 cpld_seg_valid[s] = cpld_seg_valid[s-1] && !tuser_in[s-1].last_segment;
-            end                            
+            end
 
             cpld_seg_last[s] = cpld_seg_valid[s] && tuser_in[s].last_segment;
         end
@@ -189,7 +189,7 @@ module ofs_fim_pcie_ss_rx_dual_stream
             end else begin
                 // Continuing from the previous segment in the same cycle?
                 req_seg_valid[s] = req_seg_valid[s-1] && !tuser_in[s-1].last_segment;
-            end                            
+            end
 
             req_seg_last[s] = req_seg_valid[s] && tuser_in[s].last_segment;
         end

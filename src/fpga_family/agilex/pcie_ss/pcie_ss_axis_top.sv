@@ -331,23 +331,23 @@ for (genvar j=0; j<PCIE_NUM_LINKS; j++) begin : PCIE_LINK_CONN
             .MSIX_VF_PBA_OFFSET(CFG_MSIX_VF_PBA_OFFSET_VEC),
             .MSIX_VF_PBA_BAR(CFG_MSIX_VF_PBA_BAR_VEC)
             )
-        msix
-          (
-           .axi_st_rxreq_in(rxreq_to_msix),
-           .axi_st_rxreq_out(axi_st_rxreq_if[j]),
+          msix
+           (
+            .axi_st_rxreq_in(rxreq_to_msix),
+            .axi_st_rxreq_out(axi_st_rxreq_if[j]),
 
-           .axi_st_tx_in(axi_st_tx_if[j]),
-           .axi_st_tx_out(tx_from_msix),
+            .axi_st_tx_in(axi_st_tx_if[j]),
+            .axi_st_tx_out(tx_from_msix),
 
-           .csr_clk,
-           .csr_rst_n(csr_rst_n[j]),
-           .ctrlshadow_tvalid(ctrlshadow_tvalid[j]),
-           .ctrlshadow_tdata(ctrlshadow_tdata[j]),
+            .csr_clk,
+            .csr_rst_n(csr_rst_n[j]),
+            .ctrlshadow_tvalid(ctrlshadow_tvalid[j]),
+            .ctrlshadow_tdata(ctrlshadow_tdata[j]),
 
-           .flr_req_if(flr_rsp_if[j]),
-           .flr_rsp_if(msix_flr_rsp_if),
-           .flr_rsp_tready(ss_app_st_flrcmpl_tready[j])
-           );
+            .flr_req_if(flr_rsp_if[j]),
+            .flr_rsp_if(msix_flr_rsp_if),
+            .flr_rsp_tready(ss_app_st_flrcmpl_tready[j])
+            );
     end else begin : no_msix
         // MSI-X is not enabled
         ofs_fim_axis_pipeline #(.PL_DEPTH(0))
@@ -361,32 +361,60 @@ for (genvar j=0; j<PCIE_NUM_LINKS; j++) begin : PCIE_LINK_CONN
 
 
     // Connecting the RX ST Interface
-    ofs_fim_pcie_ss_pipe_rx_sb
-      #(
-        .TDATA_WIDTH(TDATA_WIDTH),
-        .NUM_OF_SEG(CFG_NUM_SEG),
-        .CFG_HAS_RXCRDT(CFG_HAS_RXCRDT)
-        )
-      pipe_rx
-       (
-        .hip_clk(coreclkout_hip),
-        .hip_rst_n(reset_status_n),
+    if (CFG_HDR_SCHEME_IS_SIDE_BAND) begin : rx_sb
+        ofs_fim_pcie_ss_pipe_rx_sb
+          #(
+            .TDATA_WIDTH(TDATA_WIDTH),
+            .NUM_OF_SEG(CFG_NUM_SEG),
+            .CFG_HAS_RXCRDT(CFG_HAS_RXCRDT)
+            )
+          pipe_rx
+           (
+            .hip_clk(coreclkout_hip),
+            .hip_rst_n(reset_status_n),
 
-        .ss_app_st_rx_tvalid(ss_app_st_rx_tvalid[j]),
-        .ss_app_st_rx_tdata(ss_app_st_rx_tdata[j]),
-        .ss_app_st_rx_tkeep(ss_app_st_rx_tkeep[j]),
-        .ss_app_st_rx_tlast(ss_app_st_rx_tlast[j]),
-        .ss_app_st_rx_tuser_vendor(ss_app_st_rx_tuser_vendor[j]),
-        .ss_app_st_rx_tuser_last_segment(ss_app_st_rx_tuser_last_segment[j]),
-        .ss_app_st_rx_tuser_hvalid(ss_app_st_rx_tuser_hvalid[j]),
-        .ss_app_st_rx_tuser_hdr(ss_app_st_rx_tuser_hdr[j]),
-        .app_ss_st_rx_tready(app_ss_st_rx_tready[j]),
-        .ss_app_st_rxcrdt_tvalid(ss_app_st_rxcrdt_tvalid[j]),
-        .ss_app_st_rxcrdt_tdata(ss_app_st_rxcrdt_tdata[j]),
+            .ss_app_st_rx_tvalid(ss_app_st_rx_tvalid[j]),
+            .ss_app_st_rx_tdata(ss_app_st_rx_tdata[j]),
+            .ss_app_st_rx_tkeep(ss_app_st_rx_tkeep[j]),
+            .ss_app_st_rx_tlast(ss_app_st_rx_tlast[j]),
+            .ss_app_st_rx_tuser_vendor(ss_app_st_rx_tuser_vendor[j]),
+            .ss_app_st_rx_tuser_last_segment(ss_app_st_rx_tuser_last_segment[j]),
+            .ss_app_st_rx_tuser_hvalid(ss_app_st_rx_tuser_hvalid[j]),
+            .ss_app_st_rx_tuser_hdr(ss_app_st_rx_tuser_hdr[j]),
+            .app_ss_st_rx_tready(app_ss_st_rx_tready[j]),
+            .ss_app_st_rxcrdt_tvalid(ss_app_st_rxcrdt_tvalid[j]),
+            .ss_app_st_rxcrdt_tdata(ss_app_st_rxcrdt_tdata[j]),
 
-        .axi_st_rxreq_if(rxreq_to_msix),
-        .axi_st_rx_if(axi_st_rx_if[j])
-        );
+            .axi_st_rxreq_if(rxreq_to_msix),
+            .axi_st_rx_if(axi_st_rx_if[j])
+            );
+    end else begin : rx_ib
+        ofs_fim_pcie_ss_pipe_rx_ib
+          #(
+            .TDATA_WIDTH(TDATA_WIDTH),
+            .NUM_OF_SEG(CFG_NUM_SEG),
+            .CFG_HAS_RXCRDT(CFG_HAS_RXCRDT)
+            )
+          pipe_rx
+           (
+            .hip_clk(coreclkout_hip),
+            .hip_rst_n(reset_status_n),
+
+            .ss_app_st_rx_tvalid(ss_app_st_rx_tvalid[j]),
+            .ss_app_st_rx_tdata(ss_app_st_rx_tdata[j]),
+            .ss_app_st_rx_tkeep(ss_app_st_rx_tkeep[j]),
+            .ss_app_st_rx_tlast(ss_app_st_rx_tlast[j]),
+            .ss_app_st_rx_tuser_vendor(ss_app_st_rx_tuser_vendor[j]),
+            .ss_app_st_rx_tuser_last_segment(ss_app_st_rx_tuser_last_segment[j]),
+            .ss_app_st_rx_tuser_hvalid(ss_app_st_rx_tuser_hvalid[j]),
+            .app_ss_st_rx_tready(app_ss_st_rx_tready[j]),
+            .ss_app_st_rxcrdt_tvalid(ss_app_st_rxcrdt_tvalid[j]),
+            .ss_app_st_rxcrdt_tdata(ss_app_st_rxcrdt_tdata[j]),
+
+            .axi_st_rxreq_if(rxreq_to_msix),
+            .axi_st_rx_if(axi_st_rx_if[j])
+            );
+    end
 
     if (CFG_HAS_RX_TUSER_VENDOR == 0) begin
         // Only PU encoding from PCIe
@@ -400,7 +428,7 @@ for (genvar j=0; j<PCIE_NUM_LINKS; j++) begin : PCIE_LINK_CONN
         always_ff @(posedge coreclkout_hip) begin
             if (ss_app_st_rx_tvalid[j] && app_ss_st_rx_tready[j])
                 ss_app_st_rx_tuser_hvalid[j] <= ss_app_st_rx_tlast[j];
-            if (reset_status_n)
+            if (!reset_status_n)
                 ss_app_st_rx_tuser_hvalid[j] <= 1'b1;
         end
     end
@@ -431,39 +459,74 @@ for (genvar j=0; j<PCIE_NUM_LINKS; j++) begin : PCIE_LINK_CONN
 
 
     // Connecting the TX ST Interface
-    ofs_fim_pcie_ss_pipe_tx_sb
-      #(
-        .TILE(CFG_TILE_NAME),
-        .PORT_ID(j),
-        .TDATA_WIDTH(TDATA_WIDTH),
-        .NUM_OF_SEG(CFG_NUM_SEG),
-        .NUM_OF_LINKS(PCIE_NUM_LINKS)
-        )
-      pipe_tx
-       (
-        .axi_st_txreq_if(axi_st_txreq_if[j]),
-        .axi_st_tx_if(tx_from_msix),
+    if (CFG_HDR_SCHEME_IS_SIDE_BAND) begin : tx_sb
+        ofs_fim_pcie_ss_pipe_tx_sb
+          #(
+            .TILE(CFG_TILE_NAME),
+            .PORT_ID(j),
+            .TDATA_WIDTH(TDATA_WIDTH),
+            .NUM_OF_SEG(CFG_NUM_SEG),
+            .NUM_OF_LINKS(PCIE_NUM_LINKS)
+            )
+          pipe_tx
+           (
+            .axi_st_txreq_if(axi_st_txreq_if[j]),
+            .axi_st_tx_if(tx_from_msix),
 
-        .hip_clk(coreclkout_hip),
-        .hip_rst_n(reset_status_n),
-        .csr_clk,
-        .csr_rst_n(csr_rst_n[j]),
+            .hip_clk(coreclkout_hip),
+            .hip_rst_n(reset_status_n),
+            .csr_clk,
+            .csr_rst_n(csr_rst_n[j]),
 
-        .app_ss_st_tx_tvalid(app_ss_st_tx_tvalid[j]),
-        .app_ss_st_tx_tdata(app_ss_st_tx_tdata[j]),
-        .app_ss_st_tx_tkeep(app_ss_st_tx_tkeep[j]),
-        .app_ss_st_tx_tlast(app_ss_st_tx_tlast[j]),
-        .app_ss_st_tx_tuser_vendor(app_ss_st_tx_tuser_vendor[j]),
-        .app_ss_st_tx_tuser_last_segment(app_ss_st_tx_tuser_last_segment[j]),
-        .app_ss_st_tx_tuser_hvalid(app_ss_st_tx_tuser_hvalid[j]),
-        .app_ss_st_tx_tuser_hdr(app_ss_st_tx_tuser_hdr[j]),
-        .ss_app_st_tx_tready(ss_app_st_tx_tready[j]),
+            .app_ss_st_tx_tvalid(app_ss_st_tx_tvalid[j]),
+            .app_ss_st_tx_tdata(app_ss_st_tx_tdata[j]),
+            .app_ss_st_tx_tkeep(app_ss_st_tx_tkeep[j]),
+            .app_ss_st_tx_tlast(app_ss_st_tx_tlast[j]),
+            .app_ss_st_tx_tuser_vendor(app_ss_st_tx_tuser_vendor[j]),
+            .app_ss_st_tx_tuser_last_segment(app_ss_st_tx_tuser_last_segment[j]),
+            .app_ss_st_tx_tuser_hvalid(app_ss_st_tx_tuser_hvalid[j]),
+            .app_ss_st_tx_tuser_hdr(app_ss_st_tx_tuser_hdr[j]),
+            .ss_app_st_tx_tready(ss_app_st_tx_tready[j]),
 
-        .cpl_hdr_valid(cpl_hdr_d_valid),
-        .cpl_hdr(cpl_hdr_d),
-        .cpl_timeout(cpl_timeout_if[j])
-        );
+            .cpl_hdr_valid(cpl_hdr_d_valid),
+            .cpl_hdr(cpl_hdr_d),
+            .cpl_timeout(cpl_timeout_if[j])
+            );
+    end else begin : tx_ib
+        ofs_fim_pcie_ss_pipe_tx_ib
+          #(
+            .TILE(CFG_TILE_NAME),
+            .PORT_ID(j),
+            .TDATA_WIDTH(TDATA_WIDTH),
+            .NUM_OF_SEG(CFG_NUM_SEG),
+            .NUM_OF_LINKS(PCIE_NUM_LINKS)
+            )
+          pipe_tx
+           (
+            .axi_st_txreq_if(axi_st_txreq_if[j]),
+            .axi_st_tx_if(tx_from_msix),
 
+            .hip_clk(coreclkout_hip),
+            .hip_rst_n(reset_status_n),
+            .csr_clk,
+            .csr_rst_n(csr_rst_n[j]),
+
+            .app_ss_st_tx_tvalid(app_ss_st_tx_tvalid[j]),
+            .app_ss_st_tx_tdata(app_ss_st_tx_tdata[j]),
+            .app_ss_st_tx_tkeep(app_ss_st_tx_tkeep[j]),
+            .app_ss_st_tx_tlast(app_ss_st_tx_tlast[j]),
+            .app_ss_st_tx_tuser_vendor(app_ss_st_tx_tuser_vendor[j]),
+            .app_ss_st_tx_tuser_last_segment(app_ss_st_tx_tuser_last_segment[j]),
+            .app_ss_st_tx_tuser_hvalid(app_ss_st_tx_tuser_hvalid[j]),
+            .ss_app_st_tx_tready(ss_app_st_tx_tready[j]),
+
+            .cpl_hdr_valid(cpl_hdr_d_valid),
+            .cpl_hdr(cpl_hdr_d),
+            .cpl_timeout(cpl_timeout_if[j])
+            );
+
+        assign app_ss_st_tx_tuser_hdr[j] = '0;
+    end
 
     // Connecting the FLR Interface
     assign flr_req_if[j].tvalid = ss_app_st_flrrcvd_tvalid[j];
