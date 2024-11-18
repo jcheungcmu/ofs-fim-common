@@ -121,7 +121,7 @@ def set_top_topology(part, pcie_gen, pcie_instances, pcie_lanes):
     speed = int(r.stdout.decode('utf-8').strip())
     if speed >= 6 and pcie_gen > 3:
         print(f"\n *** Reducing PCIe to Gen3 to match Agilex 5 speed grade {speed} ***")
-        # pcie_gen = 3
+        pcie_gen = 3
 
     # Most configurations are 128 bits wide
     width = 128

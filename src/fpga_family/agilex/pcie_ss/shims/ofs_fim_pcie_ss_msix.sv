@@ -136,8 +136,8 @@ module ofs_fim_pcie_ss_msix
     // to also hold a payload -- set the data bus twice as wide and map it
     // down to the true bus width on exit from this MSI-X module.
     localparam MSIX_TDATA_WIDTH =
-        (axi_st_tx_out.DATA_W == pcie_ss_hdr_pkg::HDR_WIDTH) ? 2 * axi_st_tx_out.DATA_W :
-                                                               axi_st_tx_out.DATA_W;
+        (axi_st_tx_out.DATA_W < 2 * pcie_ss_hdr_pkg::HDR_WIDTH) ? 2 * pcie_ss_hdr_pkg::HDR_WIDTH :
+                                                                  axi_st_tx_out.DATA_W;
 
     logic msix_rst_req;
     logic msix_rst_done;
@@ -158,7 +158,7 @@ module ofs_fim_pcie_ss_msix
     pcie_ss_axis_if #(.DATA_W(MSIX_TDATA_WIDTH), .USER_W(axi_st_rxreq_in.USER_W))
         rxreq_out(.clk, .rst_n);
 
-    ofs_fim_pcie_bus_widen msix_rx_widen (.i_narrow_if(axi_st_rxreq_in), .o_wide_if(rxreq_in));
+    ofs_fim_pcie_bus_width msix_rx_width_in (.i_if(axi_st_rxreq_in), .o_if(rxreq_in));
 
     logic rxreq_sop;
     logic intc_rx_st_ready;
@@ -207,7 +207,7 @@ module ofs_fim_pcie_ss_msix
                                                  rxreq_out.tready;
 
     // rxreq out to FIM, mapped back to the native width
-    ofs_fim_pcie_bus_narrow msix_rx_narrow (.i_wide_if(rxreq_out), .o_narrow_if(axi_st_rxreq_out));
+    ofs_fim_pcie_bus_width msix_rx_width_out (.i_if(rxreq_out), .o_if(axi_st_rxreq_out));
 
 
     // ====================================================================
@@ -224,7 +224,7 @@ module ofs_fim_pcie_ss_msix
     pcie_ss_axis_if #(.DATA_W(MSIX_TDATA_WIDTH), .USER_W(axi_st_tx_in.USER_W))
         tx_out_wide(.clk, .rst_n);
 
-    ofs_fim_pcie_bus_widen tx_widen (.i_narrow_if(axi_st_tx_in), .o_wide_if(tx_in_wide));
+    ofs_fim_pcie_bus_width tx_width_in (.i_if(axi_st_tx_in), .o_if(tx_in_wide));
 
     pcie_ss_hdr_pkg::PCIe_IntrHdr_t tx_hdr;
     assign tx_hdr = pcie_ss_hdr_pkg::PCIe_IntrHdr_t'(tx_in_wide.tdata);
@@ -258,7 +258,7 @@ module ofs_fim_pcie_ss_msix
     assign tx_in_wide.tready = tx_hdr_is_interrupt ? msix_st_tx_tready && msix_ready :
                                                      tx_out_wide.tready;
 
-    ofs_fim_pcie_bus_narrow tx_narrow (.i_wide_if(tx_out_wide), .o_narrow_if(tx_mux[0]));
+    ofs_fim_pcie_bus_width tx_width_out (.i_if(tx_out_wide), .o_if(tx_mux[0]));
 
     pcie_ss_axis_mux
       #(
@@ -308,7 +308,7 @@ module ofs_fim_pcie_ss_msix
     assign msix_tx.tkeep = { '0, {8{1'b1}}, {($bits(msix_tx_hdr)/8){1'b1}} };
 
     // Reduce the msix_tx bus to the native width
-    ofs_fim_pcie_bus_narrow msix_tx_narrow (.i_wide_if(msix_tx), .o_narrow_if(tx_mux[1]));
+    ofs_fim_pcie_bus_width msix_tx_width (.i_if(msix_tx), .o_if(tx_mux[1]));
 
     always_ff @(posedge clk) begin
         if (msix_tx_tvalid) begin

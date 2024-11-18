@@ -52,6 +52,9 @@ module ofs_fim_pcie_ss_pipe_tx_ib
 
     typedef ofs_fim_pcie_ss_shims_pkg::t_tuser_seg [NUM_OF_SEG-1:0] t_tuser_seg_vec;
 
+    // The incoming bus width might be different from the native bus width, especially
+    // when the native width is narrower than a header.
+    localparam PIPE_TDATA_WIDTH = $bits(axi_st_tx_if.tdata);
 
     //
     // txreq: encode the required tuser fields (read requests)
@@ -86,7 +89,7 @@ module ofs_fim_pcie_ss_pipe_tx_ib
     t_tuser_seg_vec tx_enc_tuser;
     pcie_ss_axis_if
       #(
-        .DATA_W(TDATA_WIDTH),
+        .DATA_W(PIPE_TDATA_WIDTH),
         .USER_W($bits(t_tuser_seg_vec))
         )
       tx_enc(fim_clk, fim_rst_n);
@@ -106,7 +109,7 @@ module ofs_fim_pcie_ss_pipe_tx_ib
 
         // Figure out which segment is last (assuming one is)
         for (int i = NUM_OF_SEG-1; i >= 0; i = i - 1) begin
-            if (axi_st_tx_if.tkeep[(i * TDATA_WIDTH/NUM_OF_SEG) / 8] || ((i == 0) && axi_st_tx_if_sop)) begin
+            if (axi_st_tx_if.tkeep[(i * PIPE_TDATA_WIDTH/NUM_OF_SEG) / 8] || ((i == 0) && axi_st_tx_if_sop)) begin
                 tx_enc_tuser[i].last_segment = axi_st_tx_if.tlast;
                 break;
             end
@@ -199,7 +202,7 @@ module ofs_fim_pcie_ss_pipe_tx_ib
     //
     // Size the buffer for 4 max. size packets.
     localparam TX_CDC_DEPTH_LOG2 =
-        2 + $clog2((8 * ofs_pcie_ss_cfg_pkg::MAX_WR_PAYLOAD_BYTES) / TDATA_WIDTH);
+        2 + $clog2((8 * ofs_pcie_ss_cfg_pkg::MAX_WR_PAYLOAD_BYTES) / PIPE_TDATA_WIDTH);
 
     ofs_fim_axis_cdc
       #(
@@ -214,12 +217,7 @@ module ofs_fim_pcie_ss_pipe_tx_ib
     //
     // Merge tx and txreq streams.
     //
-    pcie_ss_axis_if
-      #(
-        .DATA_W(TDATA_WIDTH),
-        .USER_W($bits(t_tuser_seg_vec))
-        )
-      tx_out(hip_clk, hip_rst_n);
+    pcie_ss_axis_if #(.DATA_W(PIPE_TDATA_WIDTH), .USER_W($bits(t_tuser_seg_vec))) tx_out(hip_clk, hip_rst_n);
 
     ofs_fim_pcie_ss_tx_merge
       #(
@@ -236,19 +234,23 @@ module ofs_fim_pcie_ss_pipe_tx_ib
         );
 
 
-    t_tuser_seg_vec tx_out_tuser;
-    assign app_ss_st_tx_tvalid = tx_out.tvalid;
+    // Map to native width, if needed
+    pcie_ss_axis_if #(.DATA_W(TDATA_WIDTH), .USER_W($bits(t_tuser_seg_vec))) tx_out_native(hip_clk, hip_rst_n);
+    ofs_fim_pcie_bus_width tx_if_width (.i_if(tx_out), .o_if(tx_out_native));
 
-    assign tx_out.tready = ss_app_st_tx_tready;
-    assign app_ss_st_tx_tdata = tx_out.tdata;
-    assign app_ss_st_tx_tkeep = tx_out.tkeep;
-    assign app_ss_st_tx_tlast = tx_out.tlast;
+    t_tuser_seg_vec tx_out_native_tuser;
+    assign app_ss_st_tx_tvalid = tx_out_native.tvalid;
 
-    assign tx_out_tuser = tx_out.tuser_vendor;
+    assign tx_out_native.tready = ss_app_st_tx_tready;
+    assign app_ss_st_tx_tdata = tx_out_native.tdata;
+    assign app_ss_st_tx_tkeep = tx_out_native.tkeep;
+    assign app_ss_st_tx_tlast = tx_out_native.tlast;
+
+    assign tx_out_native_tuser = tx_out_native.tuser_vendor;
     for (genvar i = 0; i < NUM_OF_SEG; i += 1) begin
-        assign app_ss_st_tx_tuser_vendor[i] = tx_out_tuser[i].vendor;
-        assign app_ss_st_tx_tuser_last_segment[i] = tx_out_tuser[i].last_segment;
-        assign app_ss_st_tx_tuser_hvalid[i] = tx_out_tuser[i].hvalid;
+        assign app_ss_st_tx_tuser_vendor[i] = tx_out_native_tuser[i].vendor;
+        assign app_ss_st_tx_tuser_last_segment[i] = tx_out_native_tuser[i].last_segment;
+        assign app_ss_st_tx_tuser_hvalid[i] = tx_out_native_tuser[i].hvalid;
     end
 
 endmodule // ofs_fim_pcie_ss_pipe_tx_ib

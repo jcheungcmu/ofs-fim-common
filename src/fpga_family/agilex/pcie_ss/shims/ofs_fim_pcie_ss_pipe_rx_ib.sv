@@ -89,10 +89,19 @@ module ofs_fim_pcie_ss_pipe_rx_ib
     ofs_fim_axis_pipeline
       pipe_rx_buf(.clk(fim_clk), .rst_n(fim_rst_n), .axis_s(rx_buf), .axis_m(rx_buf_skid));
 
+
+    // Ensure that the bus of the remainder of the pipeline is at least the width of a header.
+    localparam PIPE_TDATA_WIDTH = (TDATA_WIDTH >= pcie_ss_hdr_pkg::HDR_WIDTH) ?
+                                      TDATA_WIDTH : pcie_ss_hdr_pkg::HDR_WIDTH;
+    pcie_ss_axis_if#(.DATA_W(PIPE_TDATA_WIDTH), .USER_W($bits(rx_in_tuser))) rx_wide(fim_clk, fim_rst_n);
+
+    ofs_fim_pcie_bus_width rx_if_width (.i_if(rx_buf_skid), .o_if(rx_wide));
+
+
     // Split the RX stream into two: completions (rx) and everything else (rxreq).
     // The streams still have side-band headers.
-    pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W($bits(rx_in_tuser))) rx_ib_split(fim_clk, fim_rst_n);
-    pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W($bits(rx_in_tuser))) rxreq_ib_split(fim_clk, fim_rst_n);
+    pcie_ss_axis_if#(.DATA_W(PIPE_TDATA_WIDTH), .USER_W($bits(rx_in_tuser))) rx_ib_split(fim_clk, fim_rst_n);
+    pcie_ss_axis_if#(.DATA_W(PIPE_TDATA_WIDTH), .USER_W($bits(rx_in_tuser))) rxreq_ib_split(fim_clk, fim_rst_n);
 
     ofs_fim_pcie_ss_rx_dual_stream
       #(
@@ -101,7 +110,7 @@ module ofs_fim_pcie_ss_pipe_rx_ib
         )
       rx_dual_stream
        (
-        .stream_in(rx_buf_skid),
+        .stream_in(rx_wide),
         .stream_out_cpld(rx_ib_split),
         .stream_out_req(rxreq_ib_split)
         );
@@ -109,15 +118,15 @@ module ofs_fim_pcie_ss_pipe_rx_ib
 
     // Reduce each stream so that headers are only at bit 0. USER_W is narrower
     // now since there is only a single header field.
-    pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W($bits(ofs_fim_pcie_ss_shims_pkg::t_tuser_seg)))
+    pcie_ss_axis_if#(.DATA_W(PIPE_TDATA_WIDTH), .USER_W($bits(ofs_fim_pcie_ss_shims_pkg::t_tuser_seg)))
         rx_ib_aligned(fim_clk, fim_rst_n);
-    pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W($bits(ofs_fim_pcie_ss_shims_pkg::t_tuser_seg)))
+    pcie_ss_axis_if#(.DATA_W(PIPE_TDATA_WIDTH), .USER_W($bits(ofs_fim_pcie_ss_shims_pkg::t_tuser_seg)))
         rxreq_ib_aligned(fim_clk, fim_rst_n);
 
     ofs_fim_pcie_ss_rx_seg_align
       #(
         .NUM_OF_SEG(NUM_OF_SEG),
-        .PL_DEPTH_IN(TDATA_WIDTH > 512 ? 1 : 0)
+        .PL_DEPTH_IN(PIPE_TDATA_WIDTH > 512 ? 1 : 0)
         )
       rx_seg_align
        (
@@ -137,7 +146,7 @@ module ofs_fim_pcie_ss_pipe_rx_ib
 
 
     // Map to AXI-S with just a one bit user field (PU/DM tuser_vendor bit)
-    pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W(1)) rx_ib(fim_clk, fim_rst_n);
+    pcie_ss_axis_if#(.DATA_W(PIPE_TDATA_WIDTH), .USER_W(1)) rx_ib(fim_clk, fim_rst_n);
     ofs_fim_pcie_ss_shims_pkg::t_tuser_seg rx_ib_aligned_tuser;
     assign rx_ib_aligned_tuser = rx_ib_aligned.tuser_vendor;
 
@@ -148,7 +157,7 @@ module ofs_fim_pcie_ss_pipe_rx_ib
     assign rx_ib.tkeep = rx_ib_aligned.tkeep;
     assign rx_ib_aligned.tready = rx_ib.tready;
 
-    pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W(1)) rxreq_ib(fim_clk, fim_rst_n);
+    pcie_ss_axis_if#(.DATA_W(PIPE_TDATA_WIDTH), .USER_W(1)) rxreq_ib(fim_clk, fim_rst_n);
     ofs_fim_pcie_ss_shims_pkg::t_tuser_seg rxreq_ib_aligned_tuser;
     assign rxreq_ib_aligned_tuser = rxreq_ib_aligned.tuser_vendor;
 
@@ -183,7 +192,7 @@ module ofs_fim_pcie_ss_pipe_rx_ib
         // Generate RX credits as packets are passed to the FIM
         ofs_fim_pcie_ss_rxcrdt
           #(
-            .TDATA_WIDTH(TDATA_WIDTH),
+            .TDATA_WIDTH(PIPE_TDATA_WIDTH),
             // Depth of the clock crossing buffer above.
             .BUFFER_DEPTH(BUFFER_DEPTH)
             )
