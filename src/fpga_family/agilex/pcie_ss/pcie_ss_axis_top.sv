@@ -698,8 +698,11 @@ end
    `endif                                                              \
     .p0_pin_perst_n                 (                               ), \
    `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_P0_PIN_PERST_N_I              \
-    .p0_pin_perst_n_i               (pin_pcie.in_perst_n            ), \
+    .p0_pin_perst_n_i               (1'b1                           ), \
     .p0_pin_perst_n_1_i             (                               ), \
+   `endif                                                              \
+   `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_I_GPIO_PERST0_N               \
+    .i_gpio_perst0_n                (pin_pcie.in_perst_n            ), \
    `endif                                                              \
     .p0_reset_status_n              (reset_status_n[0]              ), \
    `ifdef OFS_FIM_IP_CFG_``SS_NAME``_HAS_P0_I_SYSPLL_C0_CLK            \
