@@ -17,7 +17,8 @@ module pr_slot
 
    parameter EMIF              = 0,  // Emif enable
    parameter NUM_MEM_CH        = 2,  // Number of memory channel
-   parameter PL_DEPTH          = 1,  // PCIe Port pipeline depth before PR region crossing
+   parameter MM_PL_DEPTH       = 1,  // Memory pipeline depth before PR region crossing
+   parameter ST_PL_DEPTH       = 1,  // PCIe Port pipeline depth before PR region crossing
    parameter TDATA_WIDTH       = pcie_ss_axis_pkg::TDATA_WIDTH,
    parameter TUSER_WIDTH       = pcie_ss_axis_pkg::TUSER_WIDTH,
 
@@ -130,7 +131,7 @@ for (genvar j=0; j<PG_NUM_LINKS; j++) begin : PCIE_FREEZE_BRIDGE
    axis_pcie_pr_freeze_bridge #(
       .TDATA_WIDTH (TDATA_WIDTH),
       .TUSER_WIDTH (TUSER_WIDTH),
-      .PL_DEPTH    (PL_DEPTH),
+      .PL_DEPTH    (ST_PL_DEPTH),
       .PR_FREEZE_DIS (PR_FREEZE_DIS),
       .RX_REG_MODE (PCIE_RX_REG_MODE),
       .TX_REG_MODE (PCIE_TX_REG_MODE)
@@ -147,7 +148,7 @@ for (genvar j=0; j<PG_NUM_LINKS; j++) begin : PCIE_FREEZE_BRIDGE
    axis_pcie_pr_freeze_bridge #(
       .TDATA_WIDTH (TDATA_WIDTH),
       .TUSER_WIDTH (TUSER_WIDTH),
-      .PL_DEPTH    (PL_DEPTH),
+      .PL_DEPTH    (ST_PL_DEPTH),
       .PR_FREEZE_DIS (PR_FREEZE_DIS),
       .RX_REG_MODE (PCIE_RX_REG_MODE),
       .TX_REG_MODE (PCIE_TX_REG_MODE)
@@ -237,7 +238,7 @@ end //for
 
       axi_mm_pr_freeze_bridge #(
          // Register tx signals for freeze logic
-         // Number of pipeline stage
+         .NUM_PIPELINES (MM_PL_DEPTH),
          .AW_REG_MODE (AW_REG_MODE),
          .W_REG_MODE  (W_REG_MODE),
          .B_REG_MODE  (B_REG_MODE),

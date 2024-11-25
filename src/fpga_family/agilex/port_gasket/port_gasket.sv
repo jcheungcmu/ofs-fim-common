@@ -28,6 +28,8 @@ module port_gasket
 
    parameter EMIF              = 0,
    parameter NUM_MEM_CH        = 0,
+   parameter MM_PL_DEPTH       = 1,
+   parameter ST_PL_DEPTH       = 1,
 
    parameter int PG_NUM_RTABLE_ENTRIES = 3,
    parameter pf_vf_mux_pkg::t_pfvf_rtable_entry[PG_NUM_RTABLE_ENTRIES-1:0] PG_PFVF_ROUTING_TABLE = {PG_NUM_RTABLE_ENTRIES{pf_vf_mux_pkg::t_pfvf_rtable_entry'(0)}}
@@ -198,6 +200,8 @@ pr_slot #(
    .PORT_PF_VF_INFO       (PORT_PF_VF_INFO),
    .EMIF                  (EMIF),
    .NUM_MEM_CH            (NUM_MEM_CH),
+   .MM_PL_DEPTH           (MM_PL_DEPTH),
+   .ST_PL_DEPTH           (ST_PL_DEPTH),
    .PG_NUM_RTABLE_ENTRIES (PG_NUM_RTABLE_ENTRIES),
    .PG_PFVF_ROUTING_TABLE (PG_PFVF_ROUTING_TABLE)
 ) pr_slot (
