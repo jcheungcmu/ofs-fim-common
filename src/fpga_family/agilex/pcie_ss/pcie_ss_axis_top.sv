@@ -1080,21 +1080,6 @@ generate if (SOC_ATTACH == 0) begin : host_pcie
   `ifndef OFS_FIM_IP_CFG_PCIE_SS_HAS_CEB
     assign ss_app_st_cebreq_tvalid = {PCIE_NUM_LINKS{1'b0}};
   `endif
-
-    always_comb begin
-      `ifndef PCIE_SS_NUM_LANES_GT_4
-        if (PCIE_LANES >= 4) begin
-            pin_pcie.tx_p[PCIE_LANES-1:4] = '0;
-            pin_pcie.tx_n[PCIE_LANES-1:4] = '0;
-        end
-      `endif
-      `ifndef PCIE_SS_NUM_LANES_GT_8
-        if (PCIE_LANES >= 8) begin
-            pin_pcie.tx_p[PCIE_LANES-1:8] = '0;
-            pin_pcie.tx_n[PCIE_LANES-1:8] = '0;
-        end
-      `endif
-     end
 end
 else begin : soc_pcie
     soc_pcie_ss pcie_ss(
@@ -1108,21 +1093,6 @@ else begin : soc_pcie
   `ifndef OFS_FIM_IP_CFG_SOC_PCIE_SS_HAS_CEB
     assign ss_app_st_cebreq_tvalid = {PCIE_NUM_LINKS{1'b0}};
   `endif
-
-    always_comb begin
-      `ifndef SOC_PCIE_SS_NUM_LANES_GT_4
-        if (PCIE_LANES >= 4) begin
-            pin_pcie.tx_p[PCIE_LANES-1:4] = '0;
-            pin_pcie.tx_n[PCIE_LANES-1:4] = '0;
-        end
-      `endif
-      `ifndef SOC_PCIE_SS_NUM_LANES_GT_8
-        if (PCIE_LANES >= 8) begin
-            pin_pcie.tx_p[PCIE_LANES-1:8] = '0;
-            pin_pcie.tx_n[PCIE_LANES-1:8] = '0;
-        end
-      `endif
-    end
 end
 endgenerate
 endmodule // pcie_ss_axis_top

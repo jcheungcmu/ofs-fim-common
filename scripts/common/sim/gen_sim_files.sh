@@ -124,6 +124,7 @@ PROJECT_NAME=qip_gen_${OFS_TARGET}
 PROJECT_PARENT="${SIM_SETUP_DIR}/${PROJECT_NAME}"
 PROJECT_DIR="${PROJECT_PARENT}"/quartus_proj_dir
 rm -rf "${PROJECT_PARENT}"
+rm -rf "${SIM_SETUP_DIR}/qip_gen"
 
 echo "Configuring ${OFS_TARGET} build in ${PROJECT_PARENT}"
 # ALLOW_PROJ_IN_OFS_ROOTDIR overrides the normal error triggered
@@ -132,7 +133,7 @@ echo "Configuring ${OFS_TARGET} build in ${PROJECT_PARENT}"
 (cd "${OFS_ROOTDIR}"; \
  ALLOW_PROJ_IN_OFS_ROOTDIR=sim ./ofs-common/scripts/common/syn/build_top.sh --stage setup $OFSS_CONFIG_SCRIPT_ARG "${OFS_TARGET_FULL}" "${PROJECT_PARENT}")
 # UVM scripts expect qip_gen to point to the tree where qsys-generate is run
-(cd "${SIM_SETUP_DIR}"; rm -rf qip_gen; ln -s "${PROJECT_NAME}" qip_gen)
+(cd "${SIM_SETUP_DIR}"; ln -s "${PROJECT_NAME}" qip_gen)
 echo
 
 # Move the log to the project directory so it doesn't pollute the root directory
@@ -181,6 +182,11 @@ if [[ "$TILE" =~ "F-Tile" || "$TILE_HIGHSPEED" =~ "F-Tile" ]]; then
     HAS_FTILE=true
     echo "Configuring F-Tile simulation"
 fi
+HAS_RTILE=false
+if [[ "$TILE" =~ "R-Tile" || "$TILE_HIGHSPEED" =~ "R-Tile" ]]; then
+    HAS_RTILE=true
+    echo "Configuring R-Tile simulation"
+fi
 
 # Find the PIM source repository, needed for scripts. If not already present,
 # the repository will already have been fetched by build_top.sh above.
@@ -192,54 +198,10 @@ fi
 
 # Clean up any generated files from previous run
 rm -f "${SIM_SETUP_DIR}"/generated_*
+rm -rf "$SIM_SETUP_DIR"/qip_sim_script
 
 # Save last script invocation command for convenience
 echo "$CORE_COMMAND $COMMAND_INVOKED" > "${SIM_SETUP_DIR}"/generated_cmd.f
-
-
-# Pre-compile a shared version of Quartus simulation libraries. This takes 5-10
-# minutes and is independent of other work, so fork a process and do it in the
-# background.
-rm -rf "$SIM_SETUP_DIR"/qip_sim_script
-QLIBS_DIR="$SIM_SETUP_DIR"/qip_sim_script/quartus_libs
-mkdir -p "$QLIBS_DIR"
-
-if command -v vlogan &> /dev/null; then
-    mkdir -p "$QLIBS_DIR"/vcsmx
-    (cd "$QLIBS_DIR"/vcsmx
-     quartus_sh --simlib_comp -family "$FAMILY" -tool vcsmx -language verilog -cmd_file ../vcsmx_cmd_file.sh -gen_only &> ../vcsmx.log
-
-     if $HAS_FTILE; then
-         # F-Tile UVM PCIe/HSSI training depends on some preprocessor macros.
-         # Update the command file before running it.
-         sed -i -e 's/^vlogan /vlogan +define+IP7581SERDES_UX_SIMSPEED +define+TIMESCALE_EN +define+RTLSIM +define+INTC_FUNCTIONAL +define+SSM_SEQUENCE +define+SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SIMULATION +define+IP7581SERDES_UXS2T1R1PGD_PIPE_FAST_SIM +define+SRC_SPEC_SPEED_UP +define+__SRC_TEST__ /' ../vcsmx_cmd_file.sh
-     elif [[ "$FAMILY" =~ "agilex5" ]]; then
-         # Agilex 5 PCIe training macros
-         sed -i -e 's/^vlogan /vlogan +define+IP7581SERDES_UX_SIMSPEED /' ../vcsmx_cmd_file.sh
-     fi
-
-     # Parse the sources
-     chmod a+x ../vcsmx_cmd_file.sh
-     ../vcsmx_cmd_file.sh &>> ../vcsmx.log
-
-     # Rename the hidden generated setup file to a visible one that other scripts expect
-     if [ -f "$QLIBS_DIR"/vcsmx/.synopsys_vss.setup ]; then
-         mv "$QLIBS_DIR"/vcsmx/.synopsys_vss.setup "$QLIBS_DIR"/vcsmx/synopsys_sim.setup
-     fi
-    ) &
-fi
-
-## We could do the same for modelsim libraries, but there are too many problems
-## simulating IP when running modelsim in this mode. For now, Quartus libraries
-## are specified explicitly with each unit test.
-##
-#if command -v vlog &> /dev/null; then
-#    mkdir -p "$QLIBS_DIR"/mentor
-#    (cd "$QLIBS_DIR"/mentor
-#     quartus_sh --simlib_comp -family "$FAMILY" -tool questasim -language verilog -cmd_file ../vcsmx_cmd_file.sh -gen_only >& ../mentor.log
-#     ...
-#    ) &
-#fi
 
 
 #
@@ -276,6 +238,77 @@ cd "${OFS_ROOTDIR}"
      realpath --no-symlinks --relative-to="${OFS_ROOTDIR}" "${ip}" >> "${SIM_SETUP_DIR}"/generated_ip_flist.f
  done
 )
+
+
+# Pre-compile a shared version of Quartus simulation libraries. This takes 5-10
+# minutes and is independent of other work, so fork a process and do it in the
+# background.
+QLIBS_DIR="$SIM_SETUP_DIR"/qip_sim_script/quartus_libs
+mkdir -p "$QLIBS_DIR"
+
+if command -v vlogan &> /dev/null; then
+    mkdir -p "$QLIBS_DIR"/vcsmx
+    (cd "$QLIBS_DIR"/vcsmx
+     echo "ofs-common/scripts/common/sim/gen_sim_files.sh generated Quartus library script with:" > ../README
+     echo "  quartus_sh --simlib_comp -family \"$FAMILY\" -tool vcsmx -language verilog -cmd_file ../vcsmx_cmd_file.sh -gen_only" >> ../README
+
+     quartus_sh --simlib_comp -family "$FAMILY" -tool vcsmx -language verilog -cmd_file ../vcsmx_cmd_file.sh -gen_only &> ../vcsmx.log
+
+     # PCIe PIPE mode enabled?
+     is_pcie_pipe_mode=$(grep -c IS_PIPE_MODE "${PROJECT_DIR}"/ofs_ip_cfg_db/ofs_ip_cfg_pcie_ss.vh || true)
+
+     library_defines=""
+     if $HAS_FTILE; then
+         # F-Tile UVM PCIe/HSSI training depends on some preprocessor macros.
+         # Update the command file before running it.
+         # See Fast Simulation Macros for the Agilex 7 F-Tile Hard IP
+         # https://www.intel.com/content/dam/support/us/en/programmable/kdb/2024/ip/Fast-Simulation-Macros-for-the-Agilex%E2%84%A2%207-F-Tile-Hard-IP.pdf
+         library_defines="+define+IP7581SERDES_UX_SIMSPEED +define+TIMESCALE_EN +define+RTLSIM +define+INTC_FUNCTIONAL +define+SSM_SEQUENCE +define+SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SPEC_FORCE +define+IP7581SERDES_UXS2T1R1PGD_PIPE_SIMULATION +define+IP7581SERDES_UXS2T1R1PGD_PIPE_FAST_SIM +define+SRC_SPEC_SPEED_UP +define+__SRC_TEST__ "
+         if [ $is_pcie_pipe_mode != 0 ]; then
+             library_defines="+define+gdrb_GDR_PCIE_SS_DV ${library_defines}"
+             if $HAS_RTILE; then
+                 library_defines="+define+RTILE_PIPE_MODE ${library_defines}"
+             fi
+         fi
+     elif [[ "$FAMILY" =~ "agilex5" ]]; then
+         # Agilex 5 PCIe training macros
+         library_defines="+define+IP7581SERDES_UX_SIMSPEED "
+         if [ $is_pcie_pipe_mode != 0 ]; then
+             library_defines="+define+SM_PIPE_MODE ${library_defines}"
+         fi
+     else
+         if [ $is_pcie_pipe_mode != 0 ]; then
+             echo "ERROR: gen_sim_files.sh detects PIPE mode enabled but the tile-specific macro is not configured."
+             echo "ERROR: gen_sim_files.sh detects PIPE mode enabled but the tile-specific macro is not configured." >> ../README
+             exit 1
+         fi
+     fi
+
+     if [ ! -z "$library_defines" ]; then
+         echo "" >> ../README
+         echo "Added tile-specific macros:" >> ../README
+         echo "  ${library_defines}" >> ../README
+     fi
+
+     # Generate a configuration file that can be included by Verilog simulator compilation, for both
+     # Quartus libraries and downstream simulator builds.
+     echo "# Macros to apply to Verilog compilation" > ../simlib_defs.f
+     echo "${library_defines}" >> ../simlib_defs.f
+
+     # Apply the macros to the Quartus libraries
+     sed -i -e "sX^vlogan Xvlogan -F ../simlib_defs.f X" ../vcsmx_cmd_file.sh
+
+     # Parse the sources
+     chmod a+x ../vcsmx_cmd_file.sh
+     ../vcsmx_cmd_file.sh &>> ../vcsmx.log
+
+     # Rename the hidden generated setup file to a visible one that other scripts expect
+     if [ -f "$QLIBS_DIR"/vcsmx/.synopsys_vss.setup ]; then
+         mv "$QLIBS_DIR"/vcsmx/.synopsys_vss.setup "$QLIBS_DIR"/vcsmx/synopsys_sim.setup
+     fi
+    ) &
+fi
+
 
 echo "**** Generating HDL for $OFS_TARGET ****"
 

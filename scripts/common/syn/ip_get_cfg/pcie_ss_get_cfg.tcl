@@ -122,6 +122,29 @@ proc emit_ip_cfg {ofile_name ip_name} {
             }
         }
 
+        # Pipe mode simulation?
+        # pipemode_sim_hwtcl used by Agilex 5 IP
+        if { [string equal $p "pipemode_sim_hwtcl"] } {
+            set m [get_instance_parameter_value $inst $p]
+            if { $m } {
+                set pcie_ss_pipe_mode 1
+            }
+        }
+        # pipemode_sim_ed_hwtcl used by Agilex 7 AXI-S IP
+        if { [string equal $p "pipemode_sim_ed_hwtcl"] } {
+            set m [get_instance_parameter_value $inst $p]
+            if { $m } {
+                # Some IP has the PIPE mode flag but doesn't actually support PIPE
+                # mode. Check whether an interface matching a pipe mode is present.
+                foreach p $interfaces {
+                    if { [string first "txpipe" $p] != -1 || [string first "fastp_pcie" $p] != -1 } {
+                        set pcie_ss_pipe_mode 1
+                        break
+                    }
+                }
+            }
+        }
+
         if { [regexp "^core${width}_(.*)" $p match key] } {
             set core($key) [get_instance_parameter_value $inst $p]
         }
@@ -180,6 +203,10 @@ proc emit_ip_cfg {ofile_name ip_name} {
         # Assume 1 if not set
         puts $of "`define OFS_FIM_IP_CFG_${ip_name}_NUM_SEG 1"
         puts $of "`define OFS_FIM_IP_CFG_${ip_name}_NUM_SEG_IS_1 1"
+    }
+
+    if { [info exists pcie_ss_pipe_mode] } {
+        puts $of "`define OFS_FIM_IP_CFG_${ip_name}_IS_PIPE_MODE_SIM 1"
     }
 
     # Tiles have interface differences, such as tuser fields for side-band headers.
