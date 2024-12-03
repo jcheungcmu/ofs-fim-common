@@ -96,8 +96,8 @@ mem_ss_csr #(
 generate for(genvar ch = 0; ch < NUM_MEM_CHANNELS; ch++) begin : mem_clk_rst
    always_comb begin
       afu_mem_if[ch].clk   = fab_clk[0];
-      afu_mem_if[ch].rst_n = ~reset;
    end
+   fim_dup_tree dup_rst ( .clk( afu_mem_if[ch].clk ), .din( ~reset ), .dout( afu_mem_if[ch].rst_n ));
 end
 endgenerate
 
