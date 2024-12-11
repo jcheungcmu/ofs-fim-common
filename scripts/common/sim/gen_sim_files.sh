@@ -315,10 +315,13 @@ echo "**** Generating HDL for $OFS_TARGET ****"
 unset batch_ip_list
 while read ip
 do
+    # Shorten the IP path because all of them will be on the command line to qsys-generate
+    ip=$(realpath --relative-to "${PROJECT_PARENT}" "${ip}")
+
     if [ -z "$batch_ip_list" ]; then
-        batch_ip_list="$ip"
+        batch_ip_list=r/"$ip"
     else
-        batch_ip_list="$batch_ip_list --batch=$ip"
+        batch_ip_list="$batch_ip_list --batch=r/$ip"
     fi
 done < "${SIM_SETUP_DIR}"/generated_ip_flist.f
 
@@ -333,8 +336,13 @@ if $HAS_FTILE; then
     qsys_gen_extra_args="$qsys_gen_extra_args --synthesis=VERILOG"
 fi
 
-qsys-generate ${qsys_gen_extra_args} --simulation=VERILOG --simulator=VCS,VCSMX,MODELSIM --search-path="$OFS_IP_SEARCH_PATH" $batch_ip_list --family="$FAMILY" --part="$DEVICE"
-
+(cd "${PROJECT_DIR}"
+ # batch_ip_list list expects "r" to link from the project directory to the root directory
+ rm -rf r; ln -s "${PROJECT_PARENT}" r
+ qsys-generate ${qsys_gen_extra_args} --simulation=VERILOG --simulator=VCS,VCSMX,MODELSIM --search-path="$OFS_IP_SEARCH_PATH" \
+    $batch_ip_list \
+    --quartus-project=${Q_PROJECT} --rev=${Q_REVISION}
+)
 if [ $? -ne 0 ]; then
     echo "HDL generation failed. Check the errors for details."
     exit -1
