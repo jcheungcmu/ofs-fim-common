@@ -11,7 +11,7 @@ package he_lb_pkg;
     localparam CSR_DW    = 64;                                    // CSR Data width
     localparam CSR_TAG_W = ofs_pcie_ss_cfg_pkg::PCIE_RP_MAX_TAGS; // Tag width based on PCIe TLP 
 
-    localparam MAX_DATA_SIZE  = 1024;                        // Max number of cache lines transferred per test
+    localparam MAX_DATA_SIZE  = (DW > 256) ? 1024 : 2048;    // Max number of cache lines transferred per test
     localparam TOTAL_LEN_W    = $clog2(MAX_DATA_SIZE);       // Num of bits required to represent MAX_DATA_SIZE
     localparam MAX_REQ_LEN    = 16;                          // Max number of cache lines transferred per request
     localparam REQ_LEN_W      = $clog2(MAX_REQ_LEN) + 1;     // Num of bits required to represent MAX_REQ_LEN
