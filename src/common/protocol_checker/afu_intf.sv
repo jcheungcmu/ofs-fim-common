@@ -572,6 +572,26 @@ module afu_intf # (
          .o_mmio_timeout_err                   (mmio_timeout_err),
          .o_unexp_mmio_rsp_err                 (unexp_mmio_rsp_err)
          );
+
+      // Traffic Controller
+      port_traffic_control port_traffic_control_inst
+         (
+          .clk                        (clk),
+          .rst_n                      (rst_n),
+
+          .o_sel_mmio_rsp             (o_sel_mmio_rsp),
+          .o_read_flush_done          (o_read_flush_done),
+          .o_tx_f_fifo_valid_sop_cmpl (tx_f_fifo_valid_sop_cmpl),
+          .o_tx_f_fifo_rsp_tag        (tx_f_fifo_rsp_tag),
+          .i_blocking_traffic_fast    (blocking_traffic_fast),
+
+          .i_tx_hdr_is_pu_mode_r0     (afu_tx_hdr_is_pu_mode),
+          .i_tx_st_r4                 (tx_st_r4),          // input r4. The ready on this bus is port_tx_fifo almost full
+          .i_mmio_rsp                 (tx_f_fifo_mmio_if), // input for fake split completions.
+
+          .o_tx_st                    (tx_port_control_if) // output to the PCIE_ss
+          );
+
    end else begin
       assign blocking_traffic                = 1'b0;
       assign blocking_traffic_fast           = 1'b0;
@@ -591,26 +611,11 @@ module afu_intf # (
       assign mmio_wr_while_rst_err           = '0;
       assign tag_occupied_err                = '0;
       assign vf_num                          = '0;
+
+      assign o_sel_mmio_rsp                  = 1'b0;
+      assign o_read_flush_done               = 1'b0;
+      assign tx_port_control_if.tvalid       = 1'b0;
    end
-   
-   // Traffic Controller
-   port_traffic_control port_traffic_control_inst
-     (
-      .clk                        (clk),
-      .rst_n                      (rst_n),
-      
-      .o_sel_mmio_rsp             (o_sel_mmio_rsp),
-      .o_read_flush_done          (o_read_flush_done),
-      .o_tx_f_fifo_valid_sop_cmpl (tx_f_fifo_valid_sop_cmpl),
-      .o_tx_f_fifo_rsp_tag        (tx_f_fifo_rsp_tag),
-      .i_blocking_traffic_fast    (blocking_traffic_fast),
-      
-      .i_tx_hdr_is_pu_mode_r0     (afu_tx_hdr_is_pu_mode),
-      .i_tx_st_r4                 (tx_st_r4),          // input r4. The ready on this bus is port_tx_fifo almost full
-      .i_mmio_rsp                 (tx_f_fifo_mmio_if), // input for fake split completions.
-      
-      .o_tx_st                    (tx_port_control_if) // output to the PCIE_ss
-      );
    
    // Create a afu_softreset with a delayed asserting edge
    always_ff @(posedge clk) begin

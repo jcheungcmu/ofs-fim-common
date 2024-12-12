@@ -37,7 +37,6 @@ module mmio_rsp_bridge #(
    ofs_fim_axi_lite_if.rsp axi_m_if
 );
 
-import pcie_ss_axis_pkg::*;
 import pcie_ss_hdr_pkg::*;
 import st2mm_pkg::*;
 
@@ -51,14 +50,20 @@ typedef struct packed {
 } t_rsp_fifo_data;
 localparam RSP_FIFO_WIDTH = $bits(t_rsp_fifo_data);
 
+// The response generator uses a 512 bit PCIe data bus internally, here. That
+// is wide enough for both header and data in the same cycle. The internal bus
+// is then mapped to the outbound o_tx_st.
+localparam DATA_W = 512;
+localparam USER_W = o_tx_st.USER_W;
+
+
 //----------------------
 // Register and wires
 //----------------------
 logic                                        load_rsp;
 logic                                        send_packet;
 
-pcie_ss_axis_pkg::t_axis_pcie                tx_q;
-logic                                        tx_tready;
+pcie_ss_axis_if#(.DATA_W(DATA_W), .USER_W(USER_W)) tx_q (.clk(clk), .rst_n(rst_n));
 
 st2mm_pkg::t_cpl_hdr_info                    ctt_din;
 st2mm_pkg::t_cpl_hdr_info                    ctt_dout;
@@ -88,16 +93,22 @@ logic                        csr_rsp_ready;
 
 //-----------------------------------------------------------------------------------------
 
-assign load_rsp = (~tx_q.tvalid || tx_tready);
+assign load_rsp = (~tx_q.tvalid || tx_q.tready);
 
 // Interface assignment
-always_comb begin
-   o_tx_st.tvalid       = tx_q.tvalid;
-   o_tx_st.tdata        = tx_q.tdata;
-   o_tx_st.tkeep        = tx_q.tkeep;
-   o_tx_st.tuser_vendor = tx_q.tuser;
-   o_tx_st.tlast        = tx_q.tlast;
-   tx_tready            = o_tx_st.tready;
+if (o_tx_st.DATA_W >= DATA_W) begin : size_out
+   // Outbound AXI-S is at least as wide as tx_q
+   always_comb begin
+      o_tx_st.tvalid       = tx_q.tvalid;
+      o_tx_st.tdata        = { '0, tx_q.tdata };
+      o_tx_st.tkeep        = { '0, tx_q.tkeep };
+      o_tx_st.tuser_vendor = tx_q.tuser_vendor;
+      o_tx_st.tlast        = tx_q.tlast;
+      tx_q.tready          = o_tx_st.tready;
+   end
+end else begin : size_out
+   // Map tx_q to narrow o_tx_st
+   ofs_fim_pcie_bus_width tx_if_width (.i_if(tx_q), .o_if(o_tx_st));
 end
 
 //-------------------------------------------------------------------------------------
@@ -246,7 +257,7 @@ always_ff @(posedge clk) begin
    if (~send_packet && rsp_fifo_rdvalid) begin
       send_packet <= 1'b1;
    end else begin
-      if (tx_q.tvalid && tx_tready) begin
+      if (tx_q.tvalid && tx_q.tready) begin
          send_packet <= 1'b0;
       end
    end
@@ -311,19 +322,16 @@ end
 // Send completion TLP upstream (Power user header format)
 always_ff @(posedge clk) begin
    if (load_rsp) begin
-      tx_q                                <= '0;
       tx_q.tvalid                         <= ctt_dout_valid;
       tx_q.tlast                          <= ctt_dout_valid;
 
       tx_q.tdata[HDR_WIDTH-1:0]           <= cpl_hdr;           
-      tx_q.tdata[TDATA_WIDTH-1:HDR_WIDTH] <= ctt_dout.lower_addr[2] ? {'0, fifo_mmio_rsp_t1.rdata[63:32]} : fifo_mmio_rsp_t1.rdata;
+      tx_q.tdata[DATA_W-1:HDR_WIDTH]      <= ctt_dout.lower_addr[2] ? {'0, fifo_mmio_rsp_t1.rdata[63:32]} : fifo_mmio_rsp_t1.rdata;
 
       tx_q.tkeep                          <= {'0, {HDR_BYTE_CNT{1'b1}}}; // 32B header
       tx_q.tkeep[HDR_BYTE_CNT+:8]         <= ctt_dout.length[0] ? 8'h0F : 8'hFF;
 
-//      `ifndef PU_MMIO
- //        tx_q.tuser[0]                    <= 1'b1; // Data Mover Header
-//      `endif
+      tx_q.tuser_vendor                   <= '0;
    end
 
    if (~rst_n) begin

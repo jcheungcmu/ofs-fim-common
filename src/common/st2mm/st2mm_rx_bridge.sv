@@ -39,17 +39,47 @@ module st2mm_rx_bridge #(
 
 );
 
-pcie_ss_axis_if mmio_rx_if (.clk (clk), .rst_n(rst_n));
-pcie_ss_axis_if umsg_rx_if (.clk (clk), .rst_n(rst_n));
+//
+// The packet filter expects TLP header plus MMIO data in the same cycle -- a 512 bit bus.
+// If the incoming rx_st_if is wider then 512 bits it can just be truncated since headers
+// are always at bit 0. If rx_st_if is too narrow then widen it to 512 bits.
+//
+
+localparam RX_DATA_W = rx_st_if.DATA_W;
+
+localparam DATA_W = 512;
+localparam USER_W = rx_st_if.USER_W;
+
+pcie_ss_axis_if#(.DATA_W(DATA_W), .USER_W(USER_W)) rx_st (.clk(clk), .rst_n(rst_n));
+
+if (RX_DATA_W >= DATA_W) begin : size_in
+   // Truncate incoming rx_st_if to DATA_W
+   assign rx_st.tvalid = rx_st_if.tvalid;
+   assign rx_st.tlast = rx_st_if.tlast;
+   assign rx_st.tuser_vendor = rx_st_if.tuser_vendor;
+   assign rx_st.tdata = rx_st_if.tdata[DATA_W-1 : 0];
+   assign rx_st.tkeep = rx_st_if.tkeep[DATA_W/8-1 : 0];
+   assign rx_st_if.tready = rx_st.tready;
+end else begin : size_in
+   // Map narrow rx_st_if to DATA_W
+   ofs_fim_pcie_bus_width rx_if_width (.i_if(rx_st_if), .o_if(rx_st));
+end
+
+
+pcie_ss_axis_if#(.DATA_W(DATA_W), .USER_W(USER_W)) mmio_rx_if (.clk(clk), .rst_n(rst_n));
+pcie_ss_axis_if#(.DATA_W(DATA_W), .USER_W(USER_W)) umsg_rx_if (.clk(clk), .rst_n(rst_n));
 
 //---------------------------------
 // Packet filter
 //---------------------------------
-st2mm_packet_filter st2mm_pkt_filter (
+st2mm_packet_filter #(
+  .TDATA_WIDTH(DATA_W),
+  .TUSER_WIDTH(USER_W)
+) st2mm_pkt_filter (
    .clk          (clk),
    .rst_n        (rst_n),
 
-   .rx_st_if     (rx_st_if),
+   .rx_st_if     (rx_st),
 
    .mmio_st_if   (mmio_rx_if),
    .umsg_st_if   (umsg_rx_if)

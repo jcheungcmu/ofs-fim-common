@@ -37,12 +37,11 @@ ofs_axis_if #(
    .TUSER_WIDTH (TUSER_WIDTH)
 ) dmx_in(), dmx_out[NUM_IFS-1:0] (); 
 
+pcie_ss_axis_if#(.DATA_W(TDATA_WIDTH), .USER_W(TUSER_WIDTH)) rx_st_q (.clk(clk), .rst_n(rst_n));
 
 pcie_ss_hdr_pkg::PCIe_PUHdr_t          ss_pu_hdr;
 pcie_ss_hdr_pkg::t_pu_tlp_req_hdr      hdr;
 pcie_ss_hdr_pkg::t_pu_vdm_tlp_req_hdr  vdm_hdr;
-pcie_ss_axis_pkg::t_axis_pcie          rx_st_q;
-logic                                  rx_st_tready;
 logic                                  mem_req;
 logic                                  sop;
 logic                                  vdm_req;
@@ -60,7 +59,7 @@ assign vdm_hdr   = func_get_pu_tlp_hdr(ss_pu_hdr);
 // Pipeline
 //-------------------
 
-assign rx_st_if.tready = ~rx_st_q.tvalid | rx_st_tready;
+assign rx_st_if.tready = ~rx_st_q.tvalid | rx_st_q.tready;
 
 always_ff @(posedge clk) begin
    if (rx_st_if.tready) begin
@@ -68,7 +67,7 @@ always_ff @(posedge clk) begin
       rx_st_q.tdata  <= rx_st_if.tdata;
       rx_st_q.tkeep  <= rx_st_if.tkeep;
       rx_st_q.tlast  <= rx_st_if.tlast;
-      rx_st_q.tuser  <= rx_st_if.tuser_vendor;
+      rx_st_q.tuser_vendor <= rx_st_if.tuser_vendor;
       
       mem_req        <= pcie_ss_hdr_pkg::func_is_mem_req(ReqHdr_FmtType_e'(hdr.dw0.fmttype));
       vdm_req        <= func_is_vdm_req(ReqHdr_FmtType_e'(hdr.dw0.fmttype));
@@ -105,14 +104,14 @@ end
 assign sel = (sop & mem_req & (!vdm_mctp_req) & (!vdm_req) & (!vdm_req_latch)) ? 2'b01 : ((rx_st_q.tvalid & vdm_mctp_req) | vdm_req_latch) ? 2'b00 : (rx_st_q.tvalid & vdm_req & (!vdm_mctp_req) & (!vdm_req_latch)) ? 2'b10 : sel_q;
 
 always_comb begin
-   rx_st_tready   = dmx_in.tready;
+   rx_st_q.tready = dmx_in.tready;
    dmx_in.clk     = clk;
    dmx_in.rst_n   = rst_n;
    dmx_in.tvalid  = rx_st_q.tvalid;
    dmx_in.tlast   = rx_st_q.tlast;
    dmx_in.tdata   = rx_st_q.tdata;
    dmx_in.tkeep   = rx_st_q.tkeep;
-   dmx_in.tuser   = rx_st_q.tuser;
+   dmx_in.tuser   = rx_st_q.tuser_vendor;
 end
 
 axis_demux #(
