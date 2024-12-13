@@ -33,7 +33,10 @@
 `include "vendor_defines.vh"
 `include "fpga_defines.vh"
 
-module pcie_checker #(
+module pcie_checker 
+import ofs_fim_pcie_pkg::*;
+import ofs_fim_if_pkg::*;
+#(
    parameter ENABLE_MALFORMED_TLP_CHECK = 0,      // 0:DISABLE 1:ENABLE
    parameter ENABLE_COMPLETION_TIMEOUT_CHECK = 0  // 0:DISABLE 1:ENABLE
 )(

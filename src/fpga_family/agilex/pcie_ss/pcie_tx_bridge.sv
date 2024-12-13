@@ -30,7 +30,10 @@
 
 `include "fpga_defines.vh"
 
-module pcie_tx_bridge (
+module pcie_tx_bridge 
+import ofs_fim_pcie_pkg::*;
+import ofs_fim_if_pkg::*;
+(
    input  logic                           avl_clk,
    input  logic                           avl_rst_n,
    output ofs_fim_pcie_pkg::t_avst_txs    avl_tx_st,

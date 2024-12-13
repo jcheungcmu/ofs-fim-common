@@ -15,10 +15,11 @@
 //-----------------------------------------------------------------------------
 
 `include "fpga_defines.vh"
+
+module pcie_rx_bridge 
 import ofs_fim_pcie_pkg::*;
 import ofs_fim_if_pkg::*;
-
-module pcie_rx_bridge (
+(
    input  logic                     avl_clk,
    input  logic                     avl_rst_n,
    input  t_avst_rxs                avl_rx_st,

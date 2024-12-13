@@ -157,10 +157,10 @@ fi
 
 TEST_NAME="`echo $TEST_SRC_DIR|grep -o '[^/]\+$'`"
 
-MSIM_OPTS=(-c opt -suppress 2244,2388,3053,7033,12023,14408,2542 -do "run -all ; quit -f")
+MSIM_OPTS=(-c opt -suppress 2244,2388,3053,7033,12023,14408,2542,13276  -do "run -all ; quit -f")
 VCS_SIMV_PARAMS="$SIM_OPTIONS $USER_DEFINED_SIM_OPTIONS -l transcript -assert nopostproc"
 NTB_OPTS=""
-VLOG_SUPPRESS="2244,2388,7033,7061,8386,12003,14408,16154,2542"
+VLOG_SUPPRESS="2244,2388,7033,7061,8386,12003,14408,16154,2542,13276"
 VOPT_SUPPRESS=""
 SV_OPTS=""
 VCS_CM_PARAMS=""
@@ -230,7 +230,7 @@ start_time="$(date -u +%s)"
 
 if [ $MSIM -eq 1 ] ; then
     vlib work
-    vlog -mfcu -timescale=1ps/1ps $VLOG_PARAMS -lint -sv $SV_OPTS\
+    vlog -timescale=1ps/1ps $VLOG_PARAMS -lint -sv $SV_OPTS\
         $DEFINES \
         $ELAB_OPTIONS $USER_DEFINED_ELAB_OPTIONS \
         +incdir+./ \
