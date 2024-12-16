@@ -2,6 +2,26 @@
 # SPDX-License-Identifier: MIT
 
 ##
+## Utility functions to probe the project configuration.
+##
+namespace eval ::config_env {
+
+  # Return 1 if tgt_macro is set as a project VERILOG_MACRO
+  proc verilog_macro_defined {tgt_macro} {
+    set all_vlog_macros [get_all_global_assignments -name VERILOG_MACRO]
+
+    foreach_in_collection m $all_vlog_macros {
+      if { [string equal $tgt_macro [lindex $m 2]] } {
+        return 1
+      }
+    }
+
+    return 0
+  }
+
+}
+
+##
 ## FIM sources are specified using relative paths, relying on the BUILD_ROOT_REL
 ## environment variable to point to the root of a source tree. The variable must
 ## be set the first time Quartus loads a FIM project. When loading a synthesized
