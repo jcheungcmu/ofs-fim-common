@@ -8,6 +8,7 @@ default_component_params = {
     "core16_enable_10bit_tag_support_intf_hwtcl": 1,
     "core16_ctrl_shadow_en_hwtcl": 1,
     "core16_comp_timeout_en_hwtcl": 1,
+    "core16_flr_cap_user_hwtcl": 1,
     "pcie_link_en_hwtcl": 1,
     "pipemode_sim_ed_hwtcl": [1, "pipemode_sim"],
     "total_pcie_intf_hwtcl": 1,

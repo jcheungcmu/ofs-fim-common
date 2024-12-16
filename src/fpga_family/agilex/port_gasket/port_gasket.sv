@@ -110,9 +110,10 @@ ofs_fim_axi_lite_if                 m_remote_stp_csr_if();
 ofs_jtag_if                         stp_jtag_if();
     
 
-// FLR to reset vector 
-logic [PG_NUM_PORTS-1:0] 	    func_vf_rst_n[PG_NUM_LINKS-1:0];
-logic [NUM_PF-1:0][NUM_VF-1:0]      vf_flr_rst_n[PG_NUM_LINKS-1:0];
+// FLR to reset vector
+logic [PG_NUM_PORTS-1:0]       afu_port_rst_n[PG_NUM_LINKS-1:0];
+logic [NUM_PF-1:0]             pf_flr_rst_n[PG_NUM_LINKS-1:0];
+logic [NUM_PF-1:0][NUM_VF-1:0] vf_flr_rst_n[PG_NUM_LINKS-1:0];
 
 generate
    for (genvar link = 0; link < PG_NUM_LINKS; link = link + 1) begin : flr
@@ -130,6 +131,7 @@ generate
          .pcie_flr_req (flr_req[link]),
          .pcie_flr_rsp (flr_rsp[link]),
 
+         .pf_flr_rst_n (pf_flr_rst_n[link]),
          .vf_flr_rst_n (vf_flr_rst_n[link])
       );
    end
@@ -141,9 +143,8 @@ endgenerate
 // of functions to avoid problems with continuous assignment.
 //
 
-// Get the VF function level reset if VF is active for the function.
-// If VF is not active, return a constant: not in reset.
-`define GET_FUNC_VF_RST_N(LINK, PF, VF, VF_ACTIVE) ((VF_ACTIVE != 0) ? vf_flr_rst_n[LINK][PF][VF] : 1'b1)
+// Get the function level reset for each individual AFU port.
+`define GET_AFU_PORT_RST_N(LINK, PF, VF, VF_ACTIVE) (VF_ACTIVE ? vf_flr_rst_n[LINK][PF][VF] : pf_flr_rst_n[LINK][PF])
 
 reg [PG_NUM_PORTS-1:0] port_rst_in_n[PG_NUM_LINKS-1:0] = '{PG_NUM_LINKS{1'b0}};
 reg [PG_NUM_PORTS-1:0] port_rst_n[PG_NUM_LINKS-1:0];
@@ -156,7 +157,7 @@ genvar c;
 generate
    for (genvar link = 0; link < PG_NUM_LINKS; link = link + 1) begin : vf_link
       for (genvar c = 0; c < PG_NUM_PORTS; c = c + 1) begin : pg_flr_port_map
-         assign func_vf_rst_n[link][c] = `GET_FUNC_VF_RST_N(link,
+         assign afu_port_rst_n[link][c] = `GET_AFU_PORT_RST_N(link,
                                                             PORT_PF_VF_INFO[c].pf_num,
                                                             PORT_PF_VF_INFO[c].vf_num,
                                                             PORT_PF_VF_INFO[c].vf_active);
@@ -172,7 +173,7 @@ generate
          // - PCIe system reset
          always @(posedge clk) begin
             port_rst_in_n[link][c] <= ~o_afu_softreset && pg_pf_flr_rst_n[link] &&
-                                      func_vf_rst_n[link][c] && rst_n;
+                                      afu_port_rst_n[link][c] && rst_n;
          end
 
          // Build a multi-cycle duplication reset tree
@@ -369,7 +370,7 @@ integer i;
 always_comb begin
    pcie_p2c_sideband                   = '0;
    for ( i = 0 ; i < PG_NUM_PORTS ; i = i + 1'b1 )
-      if ( !func_vf_rst_n[0][i] ) begin
+      if ( !afu_port_rst_n[0][i] ) begin
          pcie_p2c_sideband.flr_rcvd_vf_num   = i + 1'b1;    // [0] = VF1, [1] = VF2, ...
          pcie_p2c_sideband.flr_rcvd_vf       = 1'b1;
       end

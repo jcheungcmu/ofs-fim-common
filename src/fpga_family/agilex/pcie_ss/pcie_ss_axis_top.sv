@@ -285,7 +285,7 @@ logic [PCIE_NUM_LINKS-1:0] [67:0]        ss_app_st_cebreq_tdata;
 logic [PCIE_NUM_LINKS-1:0]               app_ss_st_cebresp_tvalid;
 logic [PCIE_NUM_LINKS-1:0] [31:0]        app_ss_st_cebresp_tdata;
 
-logic [1:0]                              initiate_warmrst_req;
+logic [PCIE_NUM_LINKS-1:0]               initiate_warmrst_req;
 logic [PCIE_NUM_LINKS-1:0]               ss_app_dlup;
 logic [PCIE_NUM_LINKS-1:0]               ss_app_serr;
 
