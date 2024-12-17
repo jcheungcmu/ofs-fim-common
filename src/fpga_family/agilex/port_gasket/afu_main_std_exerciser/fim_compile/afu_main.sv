@@ -348,7 +348,7 @@ generate
    for (genvar link = 0; link < PG_NUM_LINKS; link = link + 1) begin: rst_link
       for (genvar p = 0; p < PG_NUM_PORTS; p = p + 1) begin: rst_p
          always @(posedge clk) port_rst_n_q1[link][p] <= port_rst_n[link][p];
-         always @(posedge clk) port_rst_n_q2[link][p] <= port_rst_n_q1[link][p] && rst_n_q1;
+         always_comb port_rst_n_q2[link][p] <= port_rst_n_q1[link][p] && rst_n_q1;
 
          // Multi-cycle duplication tree
 `ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
