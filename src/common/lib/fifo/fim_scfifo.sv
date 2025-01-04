@@ -80,8 +80,10 @@ module fim_scfifo #(
   end
 
   scfifo #(
-`ifdef FAMILY
-    .intended_device_family(`FAMILY),
+`ifdef DEVICE_FAMILY
+    .intended_device_family(`DEVICE_FAMILY),
+`else
+    .intended_device_family("Stratix 10"),
 `endif
     .lpm_numwords(N_ENTRIES),
     .lpm_showahead(SHOWAHEAD),

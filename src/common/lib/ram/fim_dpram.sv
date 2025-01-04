@@ -79,7 +79,9 @@ module fim_dpram #(
 
    altera_syncram #(
 `ifdef DEVICE_FAMILY
-      .intended_device_family(`FAMILY),
+      .intended_device_family(`DEVICE_FAMILY),
+`else
+      .intended_device_family("Stratix 10"),
 `endif
       .lpm_type       ("altera_syncram"),
       .operation_mode ("DUAL_PORT"),
