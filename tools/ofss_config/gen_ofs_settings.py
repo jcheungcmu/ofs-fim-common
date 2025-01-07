@@ -75,6 +75,12 @@ def instantiate_ips(ofs_ip_configurations, target_dir):
         ofs_config["settings"]["p_clk"] = ofs_ip_configurations["iopll"][0]["p_clk"][
             "freq"
         ]
+    
+    # If mem_ss has non uniform memory, number of memory groups to generate sim
+    # memory models
+    if "memory" in ofs_ip_configurations:
+        ofs_config["settings"]["mem_groups"] = ofs_ip_configurations["memory"][0]["settings"].get("memory_groups",1)
+
 
     for ip in ip_type:
         for ip_instance in ofs_ip_configurations[ip]:
@@ -84,7 +90,8 @@ def instantiate_ips(ofs_ip_configurations, target_dir):
                 to_config.append(PCIe(ofs_config, ip_instance, target_dir))
             elif ip == "memory":
                 to_config.append(Memory(ofs_config, ip_instance, target_dir))
-                to_config.append(SimMemory(ofs_config, ip_instance, target_dir))
+                for mem_idx in range (int(ofs_config["settings"]["mem_groups"])) :
+                    to_config.append(SimMemory(ofs_config, ip_instance, target_dir, mem_idx))
             elif ip == "hssi":
                 to_config.append(HSSI(ofs_config, ip_instance, target_dir))
 

@@ -48,6 +48,8 @@ proc lcompare {a b} {
     return 1
 }
 
+
+
 proc emit_ip_cfg {ofile_name ip_name} {
     set asp_file_name [string map {".vh" "\_asp.qprs"} $ofile_name]
     puts ${asp_file_name}
@@ -191,6 +193,7 @@ proc emit_ip_cfg {ofile_name ip_name} {
 
     # mem_ss interface ports
     set num_ddr4_channels 0
+    set num_param_groups 0
     for {set channel 0} { $channel < [llength $mem_channels] } {incr channel} {
         set type [lindex $mem_channels $channel]
         if { ![string equal "DDR4" $type] } {
@@ -207,21 +210,46 @@ proc emit_ip_cfg {ofile_name ip_name} {
             }
             puts $of "`define OFS_FIM_IP_CFG_${ip_name}_HPS_EMIF_IS_MEM_${channel}"
         } else {
-
             set interface "mem${channel}_ddr4"
             foreach port [get_interface_ports $interface] {
                 # Clean the DDR4 port name of subsystem prefix (mem#_ ddr4_)
                 set mem_port [string trimleft [string trimleft [string trimleft $port "mem${channel}_"] "ddr4"] "_"]
                 set ddr4_ch_width($mem_port) [get_interface_port_property $interface $port WIDTH]
-            }
-            if { [info exists ddr4_width] } {
-                if { ![lcompare ddr4_width ddr4_ch_width] } {
-                    send_message ERROR "Mismatched memory subsystem channel settings are unsupported in the OFS reference FIM!"
-                    exit 1
+                if { [string match "*dqs" $port]} {
+		            if { $ddr4_ch_width($mem_port) == 16 } {
+                      puts $of "`define OFS_FIM_IP_CFG_${ip_name}_CH_${channel}_DQS16"
+		            } elseif {$ddr4_ch_width($mem_port) == 18 } {
+                      puts $of "`define OFS_FIM_IP_CFG_${ip_name}_CH_${channel}_DQS18"
+		            } else {
+                      puts $of "`define OFS_FIM_IP_CFG_${ip_name}_CH_${channel}_DQS"
+		            }
                 }
-            } else {
-                lcopy ddr4_width ddr4_ch_width
             }
+
+	        # Use existing parameter group if current channel parameters match, else create new parameter group
+	        if { $num_param_groups == 0 } {
+	            send_message INFO "No memory Channel parameter groups exist. Creating new parameter group 0."	
+		        lcopy param_group_0_width ddr4_ch_width
+                puts $of "`define OFS_FIM_IP_CFG_${ip_name}_CH_${channel}_PARAM_GROUP_0"
+		        incr num_param_groups
+		        set param_group_num_channels(0) 1
+	        } else {
+	            for {set param_group 0} { $param_group <= $num_param_groups } {incr param_group } {
+                    if { [lcompare ddr4_ch_width param_group_${param_group}_width] } {
+	                    send_message INFO "Memory Channel ${channel} parameters match parameter group ${param_group}. Using existing parameter group ${param_group}."	
+                        puts $of "`define OFS_FIM_IP_CFG_${ip_name}_CH_${channel}_PARAM_GROUP_${param_group}"
+	                    incr param_group_num_channels($param_group)
+		                break
+	                } elseif { $param_group == $num_param_groups } {
+	                    send_message INFO "Memory Channel ${channel} parameters don't match any existing parameter groups. Creating new parameter group ${param_group}."	
+	                    lcopy param_group_${param_group}_width ddr4_ch_width
+                        puts $of "`define OFS_FIM_IP_CFG_${ip_name}_CH_${channel}_PARAM_GROUP_${param_group}"
+	                    incr num_param_groups
+	                    set param_group_num_channels($param_group) 1
+		                break
+	                }
+	            }
+	        }
 
             puts $of "`define OFS_FIM_IP_CFG_${ip_name}_EN_MEM_${channel}"
             incr num_ddr4_channels
@@ -251,18 +279,42 @@ proc emit_ip_cfg {ofile_name ip_name} {
 
     # Define the PHY interfaces
     # Define the Fabric EMIF DDR4 interface widths
-    if { [info exists ddr4_width] } {
+    # Check if any parameter groups exist before creating parameters
+    if { $num_param_groups > 0 } {
         puts $of ""
         puts $of "//"
         puts $of "// Fabric EMIF interface configuration "
         puts $of "//"
-        puts $of "`define OFS_FIM_IP_CFG_${ip_name}_DEFINES_EMIF_DDR4"
         puts $of "`define OFS_FIM_IP_CFG_${ip_name}_NUM_DDR4_CHANNELS ${num_ddr4_channels}"
-        foreach {port width} [array get ddr4_width] {
-            set PORT [string toupper $port]
-            puts $of "`define OFS_FIM_IP_CFG_${ip_name}_DDR4_${PORT}_WIDTH $width"
-            if { [string match "*dq" $port]} {
-             set dq_width_in_bytes [expr $width/8]
+        puts $of "`define OFS_FIM_IP_CFG_${ip_name}_NUM_PARAM_GROUPS ${num_param_groups}"
+        if { $num_param_groups == 1 } {
+            puts $of "`define OFS_FIM_IP_CFG_${ip_name}_USE_COMMON_PARAMS"
+        }
+    	for {set param_group 0} { $param_group < $num_param_groups } {incr param_group } {
+            puts $of ""
+            puts $of "// Parameter Group ${param_group}"
+            puts $of "`define OFS_FIM_IP_CFG_${ip_name}_DEFINES_EMIF_DDR4_PARAM_GROUP_${param_group}"
+            puts $of "`define OFS_FIM_IP_CFG_${ip_name}_DEFINES_EMIF_DDR4_PARAM_GROUP_${param_group}_NUM_CH $param_group_num_channels($param_group)"
+            foreach {port width} [array get param_group_${param_group}_width] {
+                set PORT [string toupper $port]
+                puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PARAM_GROUP_${param_group}_DDR4_${PORT}_WIDTH $width"
+                if { [string match "*dq" $port]} {
+                    set param_group_dq_width_in_bits($param_group) $width
+                }
+                if { [string match "*dqs" $port]} {
+                    if { $width < 10 } {
+                        puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PARAM_GROUP_${param_group}_DDR4_USE_DBI"
+                    }
+		            if { $width == 16 } {
+                      puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PARAM_GROUP_${param_group}_DQS16"
+		            } elseif {$width == 18 } {
+                      puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PARAM_GROUP_${param_group}_DQS18"
+		            } else {
+                      puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PARAM_GROUP_${param_group}_DQS"
+                    }
+                    set dqs_div_2_width [expr {$width/2}]
+                    puts $of "`define OFS_FIM_IP_CFG_${ip_name}_PARAM_GROUP_${param_group}_DDR4_DQS_DIV2_WIDTH $dqs_div_2_width"
+                }
             }
         }
     }
@@ -342,7 +394,13 @@ proc emit_ip_cfg {ofile_name ip_name} {
     load_component emif_0
     
     set mem_clk_freq  [get_component_parameter_value PHY_DDR4_MEM_CLK_FREQ_MHZ]
-    set theoretical_max_bw_GBps [expr {($mem_clk_freq*2*$num_ddr4_channels*$dq_width_in_bytes)/1000}]
+    # Calculate combined dq width of all channels
+    set combined_dq_width 0
+    for {set param_group 0} { $param_group < $num_param_groups } {incr param_group } {
+        set combined_dq_width [expr {${combined_dq_width}+($param_group_num_channels($param_group)*$param_group_dq_width_in_bits($param_group))}]
+    }
+
+    set theoretical_max_bw_GBps [expr {($mem_clk_freq*2*$combined_dq_width)/(1000*8)}]
     puts $of "   <parameter name=\"OFS_FIM_IP_CFG_${ip_name}_THEORETICAL_MAX_BW_GBPS\" value=\"${theoretical_max_bw_GBps}\"/>"
     puts $of "  </preset>"
     puts $of "</preset>"

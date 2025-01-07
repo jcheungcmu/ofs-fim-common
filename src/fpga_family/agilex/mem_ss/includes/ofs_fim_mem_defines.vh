@@ -56,8 +56,8 @@
    .``OPORT``_rresp   (``IFC``.rresp), \
    .``OPORT``_rlast   (``IFC``.rlast)
 
-`define CONNECT_OFS_FIM_DDR4_PORT(IPORT, OPORT, IFC) \
-// DDR4 Interface \
+`define CONNECT_OFS_FIM_DDR4_PORT(IPORT, OPORT, IFC, GROUP) \
+// DDR4 Interface for parameter group 0 \
 .``IPORT``_pll_ref_clk  (``IFC``.ref_clk), \
    .``IPORT``_oct_rzqin    (``IFC``.oct_rzqin), \
    .``OPORT``_ck           (``IFC``.ck), \
@@ -74,8 +74,32 @@
    .``OPORT``_alert_n      (``IFC``.alert_n), \
    .``OPORT``_dqs          (``IFC``.dqs), \
    .``OPORT``_dqs_n        (``IFC``.dqs_n), \
-   .``OPORT``_dq           (``IFC``.dq), \
-   .``OPORT``_dbi_n        (``IFC``.dbi_n)
+  `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_PARAM_``GROUP``_DDR4_USE_DBI \
+   .``OPORT``_dbi_n        (``IFC``.dbi_n), \
+  `endif                                    \
+   .``OPORT``_dq           (``IFC``.dq)
+
+
+`define CONNECT_DDR4_MODEL_TB(IPORT, OPORT, IFC, GROUP) \
+   // DDR4 Interface \
+   .``OPORT``_ck           (``IFC``.ck), \
+   .``OPORT``_ck_n         (``IFC``.ck_n), \
+   .``OPORT``_a            (``IFC``.a), \
+   .``OPORT``_act_n        (``IFC``.act_n), \
+   .``OPORT``_ba           (``IFC``.ba), \
+   .``OPORT``_bg           (``IFC``.bg), \
+   .``OPORT``_cke          (``IFC``.cke), \
+   .``OPORT``_cs_n         (``IFC``.cs_n), \
+   .``OPORT``_odt          (``IFC``.odt), \
+   .``OPORT``_reset_n      (``IFC``.reset_n), \
+   .``OPORT``_par          (``IFC``.par), \
+   .``OPORT``_alert_n      (``IFC``.alert_n), \
+   .``OPORT``_dqs          (``IFC``.dqs), \
+   .``OPORT``_dqs_n        (``IFC``.dqs_n), \
+  `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_PARAM_``GROUP``_DDR4_USE_DBI \
+   .``OPORT``_dbi_n        (``IFC``.dbi_n), \
+  `endif                                    \
+   .``OPORT``_dq           (``IFC``.dq)
 
 // Declares A bundle of AXI wires with `WIRE` prefix and attaches `PARAM` prefixed parameters
 // Useful when using .* for implicit connectsions to PD hierarchies since unimplemented ports will 

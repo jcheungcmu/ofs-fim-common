@@ -25,7 +25,12 @@ module mem_ss_top
 
    ofs_fim_emif_axi_mm_if.emif  afu_mem_if  [NUM_MEM_CHANNELS-1:0],
 
-   ofs_fim_emif_ddr4_if.emif    ddr4_mem_if [NUM_DDR4_CHANNELS-1:0],
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_0
+   ofs_fim_emif_ddr4_if.emif ddr4_mem_if[NUM_GROUP_0_DDR4_CHANNELS-1:0],
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_0
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_1
+   ofs_fim_emif_ddr4_group_1_if.emif ddr4_mem_if_group_1[NUM_GROUP_1_DDR4_CHANNELS-1:0],
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_1
 
 `ifdef INCLUDE_HPS
    // HPS interfaces
@@ -51,6 +56,7 @@ module mem_ss_top
    // ip_cfg_db flags when to enable the fabric or HPS interface 
    // and which user interfaces are enabled in the memory crossbar.
    // (OFS defaults to 1-to-1 AXI-MEM interface mapping)
+
    enum {
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_0
       MEM_0,
@@ -81,7 +87,69 @@ module mem_ss_top
 `endif
       MEM_XXX
    } mem_idx;
-   
+
+   // Map memory subsystem channel index to interface index for parameter group 0
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_0
+   enum {
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_0_PARAM_GROUP_0
+      GROUP_0_MEM_0,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_1_PARAM_GROUP_0
+      GROUP_0_MEM_1,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_2_PARAM_GROUP_0
+      GROUP_0_MEM_2,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_3_PARAM_GROUP_0
+      GROUP_0_MEM_3,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_4_PARAM_GROUP_0
+      GROUP_0_MEM_4,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_5_PARAM_GROUP_0
+      GROUP_0_MEM_5,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_6_PARAM_GROUP_0
+      GROUP_0_MEM_6,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_7_PARAM_GROUP_0
+      GROUP_0_MEM_7,
+`endif
+      GROUP_0_MEM_XXX
+   } group_0_mem_idx;
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_0
+
+   // Map memory subsystem channel index to interface index for parameter group 1
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_1
+   enum {
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_0_PARAM_GROUP_1
+      GROUP_1_MEM_0,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_1_PARAM_GROUP_1
+      GROUP_1_MEM_1,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_2_PARAM_GROUP_1
+      GROUP_1_MEM_2,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_3_PARAM_GROUP_1
+      GROUP_1_MEM_3,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_4_PARAM_GROUP_1
+      GROUP_1_MEM_4,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_5_PARAM_GROUP_1
+      GROUP_1_MEM_5,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_6_PARAM_GROUP_1
+      GROUP_1_MEM_6,
+`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_7_PARAM_GROUP_1
+      GROUP_1_MEM_7,
+`endif
+      GROUP_1_MEM_XXX
+   } group_1_mem_idx;
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_1
+
    enum {
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_AXI_MM_0
       AXI_0,
@@ -405,64 +473,103 @@ emif_csr_ic emif_csr_interconnect (
    .mem0_local_cal_fail    (mem_ss_cal_fail[MEM_0]),
    // Connect PD port to interface class with macro from ofs_fim_mem_plat_defines.svh
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem0, mem0_ddr4, ddr4_mem_if[MEM_0]),
-`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_0_PARAM_GROUP_0
+   `CONNECT_OFS_FIM_DDR4_PORT(mem0, mem0_ddr4, ddr4_mem_if[GROUP_0_MEM_0], GROUP_0),
+`elsif OFS_FIM_IP_CFG_LOCAL_MEM_CH_0_PARAM_GROUP_1
+   `CONNECT_OFS_FIM_DDR4_PORT(mem0, mem0_ddr4, ddr4_mem_if_group_1[GROUP_1_MEM_0], GROUP_1),
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_CH_0_PARAM_GROUP_X
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_0
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_1
-   .mem1_local_cal_success (mem_ss_cal_success [MEM_1]),
-   .mem1_local_cal_fail    (mem_ss_cal_fail    [MEM_1]),
+   // EMIF Calibration status
+   .mem1_local_cal_success (mem_ss_cal_success[MEM_1]),
+   .mem1_local_cal_fail    (mem_ss_cal_fail[MEM_1]),
+   // Connect PD port to interface class with macro from ofs_fim_mem_plat_defines.svh
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem1, mem1_ddr4, ddr4_mem_if[MEM_1]),
-`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_1_PARAM_GROUP_0
+   `CONNECT_OFS_FIM_DDR4_PORT(mem1, mem1_ddr4, ddr4_mem_if[GROUP_0_MEM_1], GROUP_0),
+`elsif OFS_FIM_IP_CFG_LOCAL_MEM_CH_1_PARAM_GROUP_1
+   `CONNECT_OFS_FIM_DDR4_PORT(mem1, mem1_ddr4, ddr4_mem_if_group_1[GROUP_1_MEM_1], GROUP_1),
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_CH_1_PARAM_GROUP_X
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_1
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_2
-   .mem2_local_cal_success (mem_ss_cal_success [MEM_2]),
-   .mem2_local_cal_fail    (mem_ss_cal_fail    [MEM_2]),
+   // EMIF Calibration status
+   .mem2_local_cal_success (mem_ss_cal_success[MEM_2]),
+   .mem2_local_cal_fail    (mem_ss_cal_fail[MEM_2]),
+   // Connect PD port to interface class with macro from ofs_fim_mem_plat_defines.svh
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem2, mem2_ddr4, ddr4_mem_if[MEM_2]),
-`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_2_PARAM_GROUP_0
+   `CONNECT_OFS_FIM_DDR4_PORT(mem2, mem2_ddr4, ddr4_mem_if[GROUP_0_MEM_2], GROUP_0),
+`elsif OFS_FIM_IP_CFG_LOCAL_MEM_CH_2_PARAM_GROUP_1
+   `CONNECT_OFS_FIM_DDR4_PORT(mem2, mem2_ddr4, ddr4_mem_if_group_1[GROUP_1_MEM_2], GROUP_1),
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_CH_2_PARAM_GROUP_X
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_2
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_3
-   .mem3_local_cal_success (mem_ss_cal_success [MEM_3]),
-   .mem3_local_cal_fail    (mem_ss_cal_fail    [MEM_3]),
+   // EMIF Calibration status
+   .mem3_local_cal_success (mem_ss_cal_success[MEM_3]),
+   .mem3_local_cal_fail    (mem_ss_cal_fail[MEM_3]),
+   // Connect PD port to interface class with macro from ofs_fim_mem_plat_defines.svh
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem3, mem3_ddr4, ddr4_mem_if[MEM_3]),
-`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_3_PARAM_GROUP_0
+   `CONNECT_OFS_FIM_DDR4_PORT(mem3, mem3_ddr4, ddr4_mem_if[GROUP_0_MEM_3], GROUP_0),
+`elsif OFS_FIM_IP_CFG_LOCAL_MEM_CH_3_PARAM_GROUP_1
+   `CONNECT_OFS_FIM_DDR4_PORT(mem3, mem3_ddr4, ddr4_mem_if_group_1[GROUP_1_MEM_3], GROUP_1),
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_CH_3_PARAM_GROUP_X
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_3
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_4
-   .mem4_local_cal_success (mem_ss_cal_success [MEM_4]),
-   .mem4_local_cal_fail    (mem_ss_cal_fail    [MEM_4]),
+   // EMIF Calibration status
+   .mem4_local_cal_success (mem_ss_cal_success[MEM_4]),
+   .mem4_local_cal_fail    (mem_ss_cal_fail[MEM_4]),
+   // Connect PD port to interface class with macro from ofs_fim_mem_plat_defines.svh
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem4, mem4_ddr4, ddr4_mem_if[MEM_4]),
-`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_4_PARAM_GROUP_0
+   `CONNECT_OFS_FIM_DDR4_PORT(mem4, mem4_ddr4, ddr4_mem_if[GROUP_0_MEM_4], GROUP_0),
+`elsif OFS_FIM_IP_CFG_LOCAL_MEM_CH_4_PARAM_GROUP_1
+   `CONNECT_OFS_FIM_DDR4_PORT(mem4, mem4_ddr4, ddr4_mem_if_group_1[GROUP_1_MEM_4], GROUP_1),
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_CH_4_PARAM_GROUP_X
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_4
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_5
-   .mem5_local_cal_success (mem_ss_cal_success [MEM_5]),
-   .mem5_local_cal_fail    (mem_ss_cal_fail    [MEM_5]),
+   // EMIF Calibration status
+   .mem5_local_cal_success (mem_ss_cal_success[MEM_5]),
+   .mem5_local_cal_fail    (mem_ss_cal_fail[MEM_5]),
+   // Connect PD port to interface class with macro from ofs_fim_mem_plat_defines.svh
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem5, mem5_ddr4, ddr4_mem_if[MEM_5]),
-`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_5_PARAM_GROUP_0
+   `CONNECT_OFS_FIM_DDR4_PORT(mem5, mem5_ddr4, ddr4_mem_if[GROUP_0_MEM_5], GROUP_0),
+`elsif OFS_FIM_IP_CFG_LOCAL_MEM_CH_5_PARAM_GROUP_1
+   `CONNECT_OFS_FIM_DDR4_PORT(mem5, mem5_ddr4, ddr4_mem_if_group_1[GROUP_1_MEM_5], GROUP_1),
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_CH_5_PARAM_GROUP_X
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_5
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_6
-   .mem6_local_cal_success (mem_ss_cal_success [MEM_6]),
-   .mem6_local_cal_fail    (mem_ss_cal_fail    [MEM_6]),
+   // EMIF Calibration status
+   .mem6_local_cal_success (mem_ss_cal_success[MEM_6]),
+   .mem6_local_cal_fail    (mem_ss_cal_fail[MEM_6]),
+   // Connect PD port to interface class with macro from ofs_fim_mem_plat_defines.svh
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem6, mem6_ddr4, ddr4_mem_if[MEM_6]),
-`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_6_PARAM_GROUP_0
+   `CONNECT_OFS_FIM_DDR4_PORT(mem6, mem6_ddr4, ddr4_mem_if[GROUP_0_MEM_6], GROUP_0),
+`elsif OFS_FIM_IP_CFG_LOCAL_MEM_CH_6_PARAM_GROUP_1
+   `CONNECT_OFS_FIM_DDR4_PORT(mem6, mem6_ddr4, ddr4_mem_if_group_1[GROUP_1_MEM_6], GROUP_1),
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_CH_6_PARAM_GROUP_X
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_6
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_7
-   .mem7_local_cal_success (mem_ss_cal_success [MEM_7]),
-   .mem7_local_cal_fail    (mem_ss_cal_fail    [MEM_7]),
+   // EMIF Calibration status
+   .mem7_local_cal_success (mem_ss_cal_success[MEM_7]),
+   .mem7_local_cal_fail    (mem_ss_cal_fail[MEM_7]),
+   // Connect PD port to interface class with macro from ofs_fim_mem_plat_defines.svh
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem7, mem7_ddr4, ddr4_mem_if[MEM_7]),
-`endif
-
-`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_8
-   .mem8_local_cal_success (mem_ss_cal_success [MEM_8]),
-   .mem8_local_cal_fail    (mem_ss_cal_fail    [MEM_8]),
-   // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem8, mem8_ddr4, ddr4_mem_if[MEM_8]),
-`endif
+`ifdef OFS_FIM_IP_CFG_LOCAL_MEM_CH_7_PARAM_GROUP_0
+   `CONNECT_OFS_FIM_DDR4_PORT(mem7, mem7_ddr4, ddr4_mem_if[GROUP_0_MEM_7], GROUP_0),
+`elsif OFS_FIM_IP_CFG_LOCAL_MEM_CH_7_PARAM_GROUP_1
+   `CONNECT_OFS_FIM_DDR4_PORT(mem7, mem7_ddr4, ddr4_mem_if_group_1[GROUP_1_MEM_7], GROUP_1),
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_CH_7_PARAM_GROUP_X
+`endif // OFS_FIM_IP_CFG_LOCAL_MEM_EN_MEM_7
 
 `ifdef INCLUDE_HPS
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_0
@@ -473,7 +580,7 @@ emif_csr_ic emif_csr_interconnect (
    .mem0_emif_to_hps_gp  (emif2hps_gp),
 
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem0, mem0_ddr4, ddr4_hps_if),
+   `CONNECT_OFS_FIM_DDR4_PORT(mem0, mem0_ddr4, ddr4_hps_if, GROUP_0),
 `endif
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_1
@@ -484,7 +591,7 @@ emif_csr_ic emif_csr_interconnect (
    .mem1_emif_to_hps_gp  (emif2hps_gp),
 
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem1, mem1_ddr4, ddr4_hps_if),
+   `CONNECT_OFS_FIM_DDR4_PORT(mem1, mem1_ddr4, ddr4_hps_if, GROUP_0),
 `endif
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_2
@@ -495,7 +602,7 @@ emif_csr_ic emif_csr_interconnect (
    .mem2_emif_to_hps_gp  (emif2hps_gp),
 
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem2, mem2_ddr4, ddr4_hps_if),
+   `CONNECT_OFS_FIM_DDR4_PORT(mem2, mem2_ddr4, ddr4_hps_if, GROUP_0),
 `endif
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_3
@@ -506,7 +613,7 @@ emif_csr_ic emif_csr_interconnect (
    .mem3_emif_to_hps_gp  (emif2hps_gp),
 
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem3, mem3_ddr4, ddr4_hps_if),
+   `CONNECT_OFS_FIM_DDR4_PORT(mem3, mem3_ddr4, ddr4_hps_if, GROUP_0),
 `endif
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_4
@@ -517,7 +624,7 @@ emif_csr_ic emif_csr_interconnect (
    .mem4_emif_to_hps_gp  (emif2hps_gp),
 
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem4, mem4_ddr4, ddr4_hps_if),
+   `CONNECT_OFS_FIM_DDR4_PORT(mem4, mem4_ddr4, ddr4_hps_if, GROUP_0),
 `endif
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_5
@@ -528,7 +635,7 @@ emif_csr_ic emif_csr_interconnect (
    .mem5_emif_to_hps_gp  (emif2hps_gp),
 
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem5, mem5_ddr4, ddr4_hps_if),
+   `CONNECT_OFS_FIM_DDR4_PORT(mem5, mem5_ddr4, ddr4_hps_if, GROUP_0),
 `endif
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_6
@@ -539,7 +646,7 @@ emif_csr_ic emif_csr_interconnect (
    .mem6_emif_to_hps_gp  (emif2hps_gp),
 
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem6, mem6_ddr4, ddr4_hps_if),
+   `CONNECT_OFS_FIM_DDR4_PORT(mem6, mem6_ddr4, ddr4_hps_if, GROUP_0),
 `endif
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_7
@@ -550,7 +657,7 @@ emif_csr_ic emif_csr_interconnect (
    .mem7_emif_to_hps_gp  (emif2hps_gp),
 
    // Macro args: input (to IP) port ID, output port ID, interface ID
-   `CONNECT_OFS_FIM_DDR4_PORT(mem7, mem7_ddr4, ddr4_hps_if),
+   `CONNECT_OFS_FIM_DDR4_PORT(mem7, mem7_ddr4, ddr4_hps_if, GROUP_0),
 `endif
 
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_HPS_EMIF_IS_MEM_8
