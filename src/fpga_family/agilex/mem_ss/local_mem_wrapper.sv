@@ -32,6 +32,8 @@ module local_mem_wrapper
 `ifdef OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_1
    ofs_fim_emif_ddr4_group_1_if.emif ddr4_mem_if_group_1[NUM_GROUP_1_DDR4_CHANNELS-1:0],
 `endif // OFS_FIM_IP_CFG_LOCAL_MEM_DEFINES_EMIF_DDR4_PARAM_GROUP_1
+`endif // INCLUDE_DDR4
+
 `ifdef INCLUDE_HBM
    input       uib_refclk      [NUM_HBM_DEVICES-1:0],
    input       fab_clk         [NUM_HBM_DEVICES-1:0],
@@ -40,7 +42,6 @@ module local_mem_wrapper
    input       hbm_cattrip     [NUM_HBM_DEVICES-1:0],
    input [2:0] hbm_temp        [NUM_HBM_DEVICES-1:0],
 `endif // INCLUDE_HBM
-`endif // INCLUDE_DDR4
 
 `ifdef INCLUDE_HPS
    // HPS interfaces
