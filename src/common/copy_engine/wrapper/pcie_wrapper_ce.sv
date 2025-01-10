@@ -105,6 +105,29 @@ assign pcie_ss_axis_txreq_if[0].tvalid = 'b10;
 //*******************************
 // PCIe Subsystem
 //*******************************
+
+ofs_fim_pcie_ss_pins_if #(.PCIE_LANES(PCIE_LANES)) pin_pcie();
+assign pin_pcie.refclk0_p = pin_pcie_refclk0_p;
+assign pin_pcie.refclk1_p = pin_pcie_refclk1_p;
+assign pin_pcie.in_perst_n = pin_pcie_in_perst_n;
+assign pin_pcie.rx_p = pin_pcie_rx_p;
+assign pin_pcie.rx_n = pin_pcie_rx_n;
+assign pin_pcie_tx_p = pin_pcie.tx_p;
+assign pin_pcie_tx_n = pin_pcie.tx_n;
+
+`ifdef CONFIG_AGILEX5
+   // PCIe GTS reset sequencer
+   agilex5_srcss_gts srcss_gts (
+      .o_pma_cu_clk(pin_pcie.in_flux_clk[0])
+     );
+
+   assign pin_pcie.in_flux_clk[1] = 1'b0;
+`else
+   // Unused
+   assign pin_pcie.in_flux_clk = '0;
+`endif
+
+
  pcie_wrapper #(  
      .PCIE_LANES       (PCIE_LANES      ),
      .MM_ADDR_WIDTH    (MM_ADDR_WIDTH   ),
@@ -124,13 +147,7 @@ assign pcie_ss_axis_txreq_if[0].tvalid = 'b10;
    .subsystem_warm_rst_n         (p0_subsystem_warm_rst_n       ),
    .subsystem_cold_rst_ack_n     (p0_subsystem_cold_rst_ack_n   ),
    .subsystem_warm_rst_ack_n     (p0_subsystem_warm_rst_ack_n   ),
-   .pin_pcie_refclk0_p           (pin_pcie_refclk0_p            ),
-   .pin_pcie_refclk1_p           (pin_pcie_refclk1_p            ),
-   .pin_pcie_in_perst_n          (pin_pcie_in_perst_n           ),   // connected to HIP
-   .pin_pcie_rx_p                (pin_pcie_rx_p                 ),
-   .pin_pcie_rx_n                (pin_pcie_rx_n                 ),
-   .pin_pcie_tx_p                (pin_pcie_tx_p                 ),                
-   .pin_pcie_tx_n                (pin_pcie_tx_n                 ),                
+   .pin_pcie                     (pin_pcie                      ),
    .axi_st_rxreq_if              (pcie_ss_axis_rxreq_if         ),
    .axi_st_txreq_if              (pcie_ss_axis_txreq_if         ),
    .axi_st_rx_if                 (pcie_ss_axis_rx_if            ),
