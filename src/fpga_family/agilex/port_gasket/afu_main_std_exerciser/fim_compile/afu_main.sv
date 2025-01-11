@@ -94,8 +94,8 @@ localparam TOTAL_PORTS    = PG_NUM_LINKS * PG_NUM_PORTS;
 
 (* altera_attribute = {"-name PRESERVE_REGISTER_SYN_ONLY ON"} *)
 reg [PG_NUM_LINKS-1:0][PG_NUM_PORTS-1:0] port_rst_n_q1 = {TOTAL_PORTS{1'b0}};
-(* altera_attribute = {"-name PRESERVE_REGISTER_SYN_ONLY ON"} *)
-reg [PG_NUM_LINKS-1:0][PG_NUM_PORTS-1:0] port_rst_n_q2 = {TOTAL_PORTS{1'b0}};
+
+wire[PG_NUM_LINKS-1:0][PG_NUM_PORTS-1:0] port_rst_n_din;
 
 reg rst_n_tree;
 fim_dup_tree dup_rst(.clk, .din(rst_n), .dout(rst_n_tree));
@@ -348,18 +348,18 @@ generate
    for (genvar link = 0; link < PG_NUM_LINKS; link = link + 1) begin: rst_link
       for (genvar p = 0; p < PG_NUM_PORTS; p = p + 1) begin: rst_p
          always @(posedge clk) port_rst_n_q1[link][p] <= port_rst_n[link][p];
-         always_comb port_rst_n_q2[link][p] <= port_rst_n_q1[link][p] && rst_n_q1;
+         assign port_rst_n_din[link][p] = port_rst_n_q1[link][p] && rst_n_q1;
 
          // Multi-cycle duplication tree
 `ifdef OFS_PLAT_HOST_CHAN_MULTIPLEXED
          // No PF/VF MUX - resets remain indexed by link then port
-         fim_dup_tree dup_port_rst(.clk, .din(port_rst_n_q2[link][p]), .dout(port_rst_n_tree[link][p]));
+         fim_dup_tree dup_port_rst(.clk, .din(port_rst_n_din[link][p]), .dout(port_rst_n_tree[link][p]));
 `else
          // With PF/VF MUX - lap incoming port-level resets to the
          // same order as the flattend port vectors port_rx_a_if, etc.
          localparam c = linearLinkPort(link, p);
 
-         fim_dup_tree dup_port_rst(.clk, .din(port_rst_n_q2[link][p]), .dout(port_rst_n_tree[c]));
+         fim_dup_tree dup_port_rst(.clk, .din(port_rst_n_din[link][p]), .dout(port_rst_n_tree[c]));
 `endif
       end
    end
