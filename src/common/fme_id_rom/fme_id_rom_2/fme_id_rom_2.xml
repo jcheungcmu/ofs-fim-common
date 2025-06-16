@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2024.06.26.02:22:41"
+ outputDirectory="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Agilex 7"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="AGFB014R24A2E2V"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="2"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_BOARD"
+     type="String"
+     defaultValue="default"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_CLOCK_RATE"
+     type="Long"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_CLOCK_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_RESET_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="q" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="q" direction="output" role="dataout" width="64" />
+  </interface>
+  <interface name="address" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="address" direction="input" role="address" width="3" />
+  </interface>
+  <interface name="clock" kind="clock" start="0">
+   <property name="clockRate" value="0" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="clock" direction="input" role="clk" width="1" />
+  </interface>
+ </perimeter>
+ <entity kind="fme_id_rom_2" version="1.0" name="fme_id_rom_2">
+  <parameter name="AUTO_CLOCK_CLOCK_RATE" value="-1" />
+  <parameter name="AUTO_CLOCK_CLOCK_DOMAIN" value="-1" />
+  <parameter name="AUTO_CLOCK_RESET_DOMAIN" value="-1" />
+  <parameter name="AUTO_GENERATION_ID" value="0" />
+  <parameter name="AUTO_DEVICE" value="AGFB014R24A2E2V" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Agilex 7" />
+  <parameter name="AUTO_BOARD" value="default" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="2" />
+  <generatedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/synth/fme_id_rom_2.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/synth/fme_id_rom_2.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2.ip" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/megafunctions/rom_1port/rom_1_port_hw.tcl" />
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/sld/jtag/intel_mce/intel_mce_hw.tcl" />
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/sld/jtag/intel_mce/intel_mce_arb_hw.tcl" />
+  </childSourceFiles>
+  <messages>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2_rom_1port_2021_nutbtky"</message>
+   <message level="Info" culprit="intel_mce_inst">"Generating: intel_mce_inst"</message>
+   <message level="Info" culprit="intel_mce_arb_inst">"Generating: intel_mce_arb_inst"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2_rom_1port_intel_mce_2021_iwha2ga"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: sld_mod_ram_rom_top"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2_rom_1port_intel_mce_arb_2021_tbyhvui"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: altera_sld_arbiter_top"</message>
+  </messages>
+ </entity>
+ <entity
+   kind="rom_1port"
+   version="20.2.1"
+   name="fme_id_rom_2_rom_1port_2021_nutbtky">
+  <parameter name="GUI_CLOCK_ENABLE_INPUT_A" value="false" />
+  <parameter name="GUI_NUMWORDS_A" value="8" />
+  <parameter name="DEVICE_FAMILY" value="Agilex 7" />
+  <parameter name="GUI_RAM_BLOCK_TYPE" value="M20K" />
+  <parameter name="GUI_SingleClock" value="0" />
+  <parameter name="GUI_AclrAddr" value="false" />
+  <parameter name="GUI_INIT_FILE_LAYOUT" value="PORT_A" />
+  <parameter name="GUI_MAXIMUM_DEPTH" value="0" />
+  <parameter name="GUI_RegOutput" value="true" />
+  <parameter name="GUI_CLOCK_ENABLE_OUTPUT_A" value="false" />
+  <parameter name="GUI_RESOURCE_USAGE" value="1 M20K" />
+  <parameter name="GUI_rden" value="false" />
+  <parameter name="GUI_JTAG_ID" value="NONE" />
+  <parameter name="GUI_WIDTH_A" value="64" />
+  <parameter name="GUI_FORCE_TO_ZERO" value="false" />
+  <parameter name="GUI_MIFfilename" value="fme_id_2.mif" />
+  <parameter name="GUI_OPTIMIZATION_OPTION" value="0" />
+  <parameter name="GUI_RegAddr" value="true" />
+  <parameter name="GUI_JTAG_ENABLED" value="true" />
+  <parameter name="GUI_INIT_TO_SIM_X" value="false" />
+  <parameter name="GUI_AclrOutput" value="false" />
+  <parameter name="GUI_WIDTHAD_A" value="3" />
+  <parameter name="GUI_ADDRESSSTALL_A" value="false" />
+  <parameter name="GUI_FILE_REFERENCE" value="0" />
+  <parameter name="GUI_TBENCH" value="false" />
+  <parameter name="GUI_SclrOutput" value="false" />
+  <parameter name="GUI_MODULE_NAME" value="altera_syncram" />
+  <parameter name="GUI_BlankMemory" value="1" />
+  <generatedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/rom_1port_2021/synth/fme_id_rom_2_rom_1port_2021_nutbtky.v"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/rom_1port_2021/synth/fme_id_rom_2_rom_1port_2021_nutbtky.v"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/megafunctions/rom_1port/rom_1_port_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/sld/jtag/intel_mce/intel_mce_hw.tcl" />
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/sld/jtag/intel_mce/intel_mce_arb_hw.tcl" />
+  </childSourceFiles>
+  <instantiator instantiator="fme_id_rom_2" as="rom_1port_0" />
+  <messages>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2_rom_1port_2021_nutbtky"</message>
+   <message level="Info" culprit="intel_mce_inst">"Generating: intel_mce_inst"</message>
+   <message level="Info" culprit="intel_mce_arb_inst">"Generating: intel_mce_arb_inst"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2_rom_1port_intel_mce_2021_iwha2ga"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: sld_mod_ram_rom_top"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2_rom_1port_intel_mce_arb_2021_tbyhvui"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: altera_sld_arbiter_top"</message>
+  </messages>
+ </entity>
+ <entity
+   kind="rom_1port_intel_mce"
+   version="20.2.1"
+   name="fme_id_rom_2_rom_1port_intel_mce_2021_iwha2ga">
+  <parameter name="IS_DATA_IN_RAM" value="1" />
+  <parameter name="NUMWORDS" value="8" />
+  <parameter name="IS_READABLE" value="1" />
+  <parameter name="FIFO_SIZE" value="16" />
+  <parameter name="SLD_NODE_INFO" value="270036480" />
+  <parameter name="QUEUE_SIZE_WIDTH" value="5" />
+  <parameter name="FIFO_SIZE_WIDTH" value="4" />
+  <parameter name="BYTE_ENABLE_WIDTH" value="1" />
+  <parameter name="NODE_NAME" value="NONE" />
+  <parameter name="BACKPRESSURE_ENABLED" value="1" />
+  <parameter name="WIDTH_WORD" value="64" />
+  <parameter name="NODE_NAME_DEC" value="1313820229" />
+  <parameter name="LATENCY" value="2" />
+  <parameter name="WIDTHAD" value="3" />
+  <parameter name="SHIFT_COUNT_BITS" value="7" />
+  <parameter name="FIFO_SIZE_DELAY" value="5" />
+  <generatedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/rom_1port_2021/synth/fme_id_rom_2_rom_1port_intel_mce_2021_iwha2ga.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/rom_1port_2021/synth/fme_id_rom_2_rom_1port_intel_mce_2021_iwha2ga.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles/>
+  <childSourceFiles>
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/sld/jtag/intel_mce/intel_mce_hw.tcl" />
+  </childSourceFiles>
+  <instantiator
+     instantiator="fme_id_rom_2_rom_1port_2021_nutbtky"
+     as="intel_mce_inst" />
+  <messages>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2_rom_1port_intel_mce_2021_iwha2ga"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: sld_mod_ram_rom_top"</message>
+  </messages>
+ </entity>
+ <entity
+   kind="rom_1port_intel_mce_arb"
+   version="20.2.1"
+   name="fme_id_rom_2_rom_1port_intel_mce_arb_2021_tbyhvui">
+  <parameter name="BYTE_ENABLE_WIDTH" value="1" />
+  <parameter name="DATA_WIDTH" value="64" />
+  <parameter name="LATENCY" value="2" />
+  <parameter name="WIDTHAD" value="3" />
+  <generatedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/rom_1port_2021/synth/fme_id_rom_2_rom_1port_intel_mce_arb_2021_tbyhvui.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/rom_1port_2021/synth/fme_id_rom_2_rom_1port_intel_mce_arb_2021_tbyhvui.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles/>
+  <childSourceFiles>
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/sld/jtag/intel_mce/intel_mce_arb_hw.tcl" />
+  </childSourceFiles>
+  <instantiator
+     instantiator="fme_id_rom_2_rom_1port_2021_nutbtky"
+     as="intel_mce_arb_inst" />
+  <messages>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: fme_id_rom_2_rom_1port_intel_mce_arb_2021_tbyhvui"</message>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: altera_sld_arbiter_top"</message>
+  </messages>
+ </entity>
+ <entity kind="intel_mce" version="1.0.1" name="sld_mod_ram_rom_top">
+  <parameter name="IS_DATA_IN_RAM" value="1" />
+  <parameter name="NUMWORDS" value="8" />
+  <parameter name="IS_READABLE" value="1" />
+  <parameter name="FIFO_SIZE" value="16" />
+  <parameter name="SLD_NODE_INFO" value="270036480" />
+  <parameter name="QUEUE_SIZE_WIDTH" value="5" />
+  <parameter name="FIFO_SIZE_WIDTH" value="4" />
+  <parameter name="BYTE_ENABLE_WIDTH" value="1" />
+  <parameter name="NODE_NAME" value="NONE" />
+  <parameter name="BACKPRESSURE_ENABLED" value="1" />
+  <parameter name="WIDTH_WORD" value="64" />
+  <parameter name="NODE_NAME_DEC" value="1313820229" />
+  <parameter name="LATENCY" value="2" />
+  <parameter name="WIDTHAD" value="3" />
+  <parameter name="SHIFT_COUNT_BITS" value="7" />
+  <parameter name="FIFO_SIZE_DELAY" value="5" />
+  <generatedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/intel_mce_101/synth/sld_mod_ram_rom_top.vhd"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/intel_mce_101/synth/sld_mod_ram_rom_top.vhd"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/sld/jtag/intel_mce/intel_mce_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator
+     instantiator="fme_id_rom_2_rom_1port_intel_mce_2021_iwha2ga"
+     as="intel_mce_inst" />
+  <messages>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: sld_mod_ram_rom_top"</message>
+  </messages>
+ </entity>
+ <entity kind="intel_mce_arb" version="1.0.0" name="altera_sld_arbiter_top">
+  <parameter name="BYTE_ENABLE_WIDTH" value="1" />
+  <parameter name="DATA_WIDTH" value="64" />
+  <parameter name="LATENCY" value="2" />
+  <parameter name="WIDTHAD" value="3" />
+  <generatedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/intel_mce_arb_100/synth/altera_sld_arbiter_top.v"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/home/jcheung2/ofs24/ofs-agx7-pcie-attach/ofs-common/src/common/fme_id_rom/fme_id_rom_2/intel_mce_arb_100/synth/altera_sld_arbiter_top.v"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="/ofs_install/quartus/23.4/ip/altera/sld/jtag/intel_mce/intel_mce_arb_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator
+     instantiator="fme_id_rom_2_rom_1port_intel_mce_arb_2021_tbyhvui"
+     as="intel_mce_arb_inst" />
+  <messages>
+   <message level="Info" culprit="fme_id_rom_2">"Generating: altera_sld_arbiter_top"</message>
+  </messages>
+ </entity>
+</deploy>

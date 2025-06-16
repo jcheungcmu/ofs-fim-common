@@ -143,7 +143,7 @@ assign port_capability_attr.port_capability.reserved36   = {28{RsvdZ}};
 assign port_capability_attr.port_capability.num_supp_int = {4{RO}};
 assign port_capability_attr.port_capability.reserved24   = {8{RsvdZ}};
 assign port_capability_attr.port_capability.mmio_size    = {16{RO}};
-assign port_capability_attr.port_capability.reserved0    = {8{RsvdZ}};
+assign port_capability_attr.port_capability.reserved0    = {8{RO}};
 port_csr_port_control_attr_t port_control_attr;
 assign port_control_attr.port_control.reserved5           = {59{RsvdZ}};
 assign port_control_attr.port_control.port_soft_reset_ack = RO;

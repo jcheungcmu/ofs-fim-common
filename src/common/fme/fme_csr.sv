@@ -794,7 +794,7 @@ logic [63:0] rom_data;
 // ROM storing FME IDs:
 // Reading a ROM address takes 2 clock cycles (both address and q are registered).
 //--------------------------------------------------------------------------------
-fme_id_rom fme_id_rom (
+fme_id_rom_3 fme_id_rom (
    .address(rom_addr),
    .clock(clk),
    .q(rom_data)
@@ -1128,7 +1128,8 @@ assign fme_csr_fab_capability_reset.data = fme_csr_fab_capability_update.data;
 assign fme_csr_fab_capability_update.fab_capability.reserved30     = {34{1'b0}};
 assign fme_csr_fab_capability_update.fab_capability.addr_width     = 6'd20;
 assign fme_csr_fab_capability_update.fab_capability.reserved20     = {4{1'b0}};
-assign fme_csr_fab_capability_update.fab_capability.num_ports      = 3'd1;
+// assign fme_csr_fab_capability_update.fab_capability.num_ports      = 3'd1;
+assign fme_csr_fab_capability_update.fab_capability.num_ports      = 3'd2;
 assign fme_csr_fab_capability_update.fab_capability.reserved13     = {4{1'b0}};
 assign fme_csr_fab_capability_update.fab_capability.pcie0_link     = 1'b1;
 assign fme_csr_fab_capability_update.fab_capability.reserved8      = {4{1'b0}};
@@ -1152,7 +1153,7 @@ assign fme_csr_port1_offset_update.port_offset.reserved57        = 3'b000;
 assign fme_csr_port1_offset_update.port_offset.decouple_port_csr = 1'b0;
 assign fme_csr_port1_offset_update.port_offset.afu_access_ctrl   = 1'b0;
 assign fme_csr_port1_offset_update.port_offset.reserved35        = {20{1'b0}};
-assign fme_csr_port1_offset_update.port_offset.bar_id            = 3'd0; // PF BAR0 - WAS BAR2
+assign fme_csr_port1_offset_update.port_offset.bar_id            = 3'd7; // PF BAR0 - WAS BAR2
 assign fme_csr_port1_offset_update.port_offset.reserved24        = 8'h00;
 assign fme_csr_port1_offset_update.port_offset.port_byte_offset  = 24'h080000;
 // Port2---------------------------------------------------------------------------------------------------

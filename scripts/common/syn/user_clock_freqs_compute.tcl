@@ -66,6 +66,9 @@ proc compute_uclk {project_name revision_name} {
 
         # Get the achieved frequencies for each clock
         set x [get_user_clks_and_fmax $::userClocks::u_clkdiv2_name $::userClocks::u_clk_name $jitter_compensation]
+        
+        #jason might need to fix this? 
+        
         # Construct a list of just frequencies (low then high)
         set uclk_freqs_actual [list [lindex $x 0] [lindex $x 2]]
 

@@ -27,6 +27,24 @@ import top_cfg_pkg::*;
 // afu_synth_setup/afu_sim_setup scripts.
 `ifndef AFU_TOP_REQUIRES_AFU_MAIN_IF
 
+interface asp_avst_if #(
+   //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
+    parameter DATA_WIDTH        = 64
+);
+    logic                           valid;
+    logic                           ready;
+    logic [DATA_WIDTH-1:0]          data;
+    
+    modport source (
+        input  ready,
+        output valid, data
+    );
+    modport sink (
+        input  valid, data,
+        output ready
+    );
+endinterface : asp_avst_if
+
 module port_afu_instances # (
    parameter PG_NUM_PORTS    = 1,
    // PF/VF to which each port is mapped
@@ -34,7 +52,8 @@ module port_afu_instances # (
                 {PG_NUM_PORTS{pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t'(0)}},
 
    parameter NUM_MEM_CH      = 0,
-   parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS
+   parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS,
+   parameter JASON_NUM_IOPIPES = 16
 )(
    input  logic clk,
    input  logic clk_div2,
@@ -44,6 +63,11 @@ module port_afu_instances # (
 
    input  logic rst_n,
    input  logic [PG_NUM_PORTS-1:0] port_rst_n,
+
+   // asp_avst_if.source    udp_avst_from_kernel[ofs_fim_eth_plat_if_pkg::NUM_ETH_CHANNELS/2-1:0],
+   // asp_avst_if.sink      udp_avst_to_kernel[ofs_fim_eth_plat_if_pkg::NUM_ETH_CHANNELS/2-1:0],
+   asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+   asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
 
    // PCIe A ports are the standard TLP channels. All host responses
    // arrive on the RX A port.
@@ -68,6 +92,8 @@ module port_afu_instances # (
       // Local memory
      ,ofs_fim_emif_axi_mm_if.user     ext_mem_if [NUM_MEM_CH-1:0]
    `endif
+
+
 
    `ifdef INCLUDE_HSSI
      ,ofs_fim_hssi_ss_tx_axis_if.client hssi_ss_st_tx [MAX_ETH_CH-1:0],
@@ -225,7 +251,9 @@ assign plat_ifc.other.ports[0].sample_state = 32'hcafef00d;
 //----------------------------------------------
 
 `PLATFORM_SHIM_MODULE_NAME `PLATFORM_SHIM_MODULE_NAME (
-   .plat_ifc
+   .plat_ifc,
+   .udp_avst_from_kernel,
+   .udp_avst_to_kernel
 );
 
 `endif //  `ifndef OPAE_PLATFORM_GEN

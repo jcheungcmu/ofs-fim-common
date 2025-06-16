@@ -146,6 +146,7 @@ EOF
 if [ ! -z ${Q_PR_REVISION} ]; then
     echo "Q_PR_REVISION=${Q_PR_REVISION}" >> build_env_db.txt
     echo "Q_PR_PARTITION_NAME=${Q_PR_PARTITION_NAME}" >> build_env_db.txt
+    echo "Q_PR_PARTITION_NAME_2=${Q_PR_PARTITION_NAME_2}" >> build_env_db.txt
 fi
 
 # All the environment variables passed to build_env_db.txt must be defined
@@ -165,10 +166,17 @@ env | grep "^OFS_BUILD_TAG_" | cat >> build_env_db.txt
 # copy over fme_id.mif and qsf as these files will be modified per build
 
 # remove possible symlink before copying
-rm -f ${WORK_FME_ID_MIF_FILE}
+rm -f ${WORK_FME_ID_MIF_FILE} 
 cp -f ${FME_ID_MIF_FILE} ${WORK_FME_ID_MIF_FILE}
 chk_exit_code "cp ${FME_ID_MIF_FILE} ${WORK_FME_ID_MIF_FILE}"
 
+rm -f ${WORK_FME_ID_MIF_FILE_2} 
+cp -f ${FME_ID_MIF_FILE} ${WORK_FME_ID_MIF_FILE_2}
+chk_exit_code "cp ${FME_ID_MIF_FILE} ${WORK_FME_ID_MIF_FILE_2}"
+
+rm -f ${WORK_FME_ID_MIF_FILE_3} 
+cp -f ${FME_ID_MIF_FILE} ${WORK_FME_ID_MIF_FILE_3}
+chk_exit_code "cp ${FME_ID_MIF_FILE} ${WORK_FME_ID_MIF_FILE_3}"
 
 # remove possible symlink before copying
 # need hard copy of QSF and QPF file as Quartus will modify them (don't want to pollute source tree)

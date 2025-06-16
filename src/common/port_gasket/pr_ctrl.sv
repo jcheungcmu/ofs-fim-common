@@ -72,6 +72,9 @@ module pr_ctrl (
 
    logic              rsp_pr_access_cmplt;   // HW -- FME PR done signal 
 
+   logic [1:0]        req_pr_regionid;       // SW -- FME signal for region id
+   logic [1:0]        req_pr_regionid_1x;    //    -- sync to PR HOST clock
+
    // =============================================================================  
    // FME PR STATUS                          // Who updates this?
    // =============================================================================
@@ -187,7 +190,17 @@ module pr_ctrl (
    // Multiple AFUs are not supported in this implementation. Extending support 
    // involves designing a model to support masking off certain ports for PR
    // ============================================================================= 
-   assign pr_port_mask = '1;
+   assign pr_port_mask = 2'b00;
+
+   // always_comb begin 
+   //    unique case (req_pr_regionid_1x)
+   //       2'b00: pr_port_mask = 4'b0001;
+   //       2'b01: pr_port_mask = 4'b0010;
+   //       2'b10: pr_port_mask = 4'b0100;
+   //       2'b11: pr_port_mask = 4'b1000;
+   //    endcase
+   // end 
+   
    assign o_pr_freeze  = pr_freeze & pr_port_mask;
    assign o_pr_reset   = pr_reset  & pr_port_mask;
 
@@ -243,7 +256,14 @@ module pr_ctrl (
       req_pr_push_cmplt    = i_pr_control[13];
       req_clr_err          = i_pr_status[16];
       req_pr_control_reset = i_pr_control[0];
+
+      req_pr_regionid      = i_pr_control[9:8];
    end
+
+   always_ff @(posedge clk_1x) begin 
+      req_pr_regionid_1x        <= (req_pr_start_1x) ? req_pr_regionid : req_pr_regionid_1x;
+   end 
+
 
    always_ff @(posedge clk_1x) begin
       req_pr_start_1x       <= req_pr_start;
@@ -425,8 +445,8 @@ module pr_ctrl (
          // PR FIFO signals
          pr_ctl_fifo_aclr    <= 1'b0;
          // PORT output signals
-         pr_reset            <= 1'b0;
-         pr_freeze           <= 1'b0;
+         pr_reset            <= 2'b00;
+         pr_freeze           <= 2'b00;
          // PORT signal assertion delay counters
          pr_freeze_cycle_cnt <= 'h1;
          pr_reset_cycle_cnt  <= 'h1;
@@ -435,7 +455,7 @@ module pr_ctrl (
          rsp_pr_access_cmplt <= 1'b0;
       end // if (!rst_n_1x)
       else if (master_reset) begin
-         pr_freeze <= 1'b0;
+         pr_freeze <= 2'b00;
          pr_freeze_cycle_cnt <= 'h1;
       end
       else begin
@@ -444,8 +464,8 @@ module pr_ctrl (
          pr_ip_datavalid     <= 1'b0;
          pr_ctl_ip_reset     <= 1'b0;
          pr_ctl_fifo_aclr    <= 1'b0;
-         pr_reset            <= 1'b0;
-         pr_freeze           <= 1'b0;
+         pr_reset            <= 2'b00;
+         pr_freeze           <= 2'b00;
          err_clr_prev_state  <= 1'b0;
          rsp_pr_access_cmplt <= 1'b0;
 
@@ -464,32 +484,32 @@ module pr_ctrl (
             end
             pr_control_state[PR_CTL_PORT_RESET_BIT]: begin
                pr_ctl_ip_reset <= 1'b1;    // Hold PR IP in reset
-               pr_reset        <= 1'b1;    // Hold Port in reset
+               pr_reset        <= 2'b11;    // Hold Port in reset
                // iterate reset delay
                pr_reset_cycle_cnt <= {pr_reset_cycle_cnt[PR_DELAY_DEPTH-2:0],
                                        pr_reset_cycle_cnt[PR_DELAY_DEPTH-1]};
             end
             pr_control_state[PR_CTL_AFU_FREEZE_BIT]: begin
                pr_ctl_ip_reset <= 1'b1;    // Hold PR IP in reset
-               pr_reset        <= 1'b1;    // Hold Port in reset
-               pr_freeze       <= 1'b1;    // Hold Port freeze
+               pr_reset        <= 2'b11;    // Hold Port in reset
+               pr_freeze       <= 2'b11;    // Hold Port freeze
                // iterate freeze delay
                pr_freeze_cycle_cnt <= {pr_freeze_cycle_cnt[PR_DELAY_DEPTH-2:0],
                                        pr_freeze_cycle_cnt[PR_DELAY_DEPTH-1]};
             end
             pr_control_state[PR_CTL_INITIATE_PR_BIT]: begin
-               pr_reset    <= 1'b1;           // Hold Port in reset
-               pr_freeze   <= 1'b1;           // Hold Port freeze
+               pr_reset    <= 2'b11;           // Hold Port in reset
+               pr_freeze   <= 2'b11;           // Hold Port freeze
                pr_ip_start <= !pr_fifo_empty; // start PR when data is available
             end
             pr_control_state[PR_CTL_PR_IN_PROGRESS_BIT]: begin
-               pr_reset  <= 1'b1; // Hold Port in reset
-               pr_freeze <= 1'b1; // Hold Port freeze
+               pr_reset  <= 2'b11; // Hold Port in reset
+               pr_freeze <= 2'b11; // Hold Port freeze
                // stream data from PR FIFO to PR IP
                pr_ip_datavalid <= pr_fifo_pop | (pr_ip_datavalid & !pr_ip_sink_ready);
             end
             pr_control_state[PR_CTL_REQ_COMPLETE_BIT]: begin
-               pr_reset  <= 1'b1; // Hold Port in reset
+               pr_reset  <= 2'b11; // Hold Port in reset
                pr_freeze_cycle_cnt <= {pr_freeze_cycle_cnt[PR_DELAY_DEPTH-2:0],
                                        pr_freeze_cycle_cnt[PR_DELAY_DEPTH-1]};
             end

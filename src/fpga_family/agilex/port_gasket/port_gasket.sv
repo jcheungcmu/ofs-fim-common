@@ -10,6 +10,24 @@ import pcie_ss_axis_pkg::*;
 import ofs_fim_if_pkg::*;
 import ofs_fim_eth_if_pkg::*;
 
+interface asp_avst_if #(
+   //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
+    parameter DATA_WIDTH        = 64
+);
+    logic                           valid;
+    logic                           ready;
+    logic [DATA_WIDTH-1:0]          data;
+    
+    modport source (
+        input  ready,
+        output valid, data
+    );
+    modport sink (
+        input  valid, data,
+        output ready
+    );
+endinterface : asp_avst_if
+
 module  port_gasket #(
    parameter PG_NUM_PORTS      = 1,
    parameter NUM_PF       = top_cfg_pkg::FIM_NUM_PF,
@@ -28,9 +46,21 @@ module  port_gasket #(
    parameter EMIF              = 0,
    parameter NUM_MEM_CH        = 0,
 
+   parameter JASON_NUM_IOPIPES = 0,
+   parameter JASON_IOPIPES_WIDTH = 0,
+   `ifdef INCLUDE_HSSI
+   parameter JASON_MAX_NUM_ETH_CH       = 0, // Number of Ethernet channels in the PR region
+   `endif
+
    parameter int PG_NUM_RTABLE_ENTRIES = 3,
    parameter pf_vf_mux_pkg::t_pfvf_rtable_entry[PG_NUM_RTABLE_ENTRIES-1:0] PG_PFVF_ROUTING_TABLE = {PG_NUM_RTABLE_ENTRIES{pf_vf_mux_pkg::t_pfvf_rtable_entry'(0)}}
 )(
+   // output                      uclk,
+   // output                      uclk_div2,
+
+   output                      port2_reset,
+   output                      port2_freeze,
+   
    input                       refclk,
    input                       clk,
    input                       clk_div2,
@@ -61,11 +91,19 @@ module  port_gasket #(
    ofs_fim_emif_axi_mm_if.user afu_mem_if  [NUM_MEM_CH-1:0],
 `endif
 
+   asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+   asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+
 `ifdef INCLUDE_HSSI
-   ofs_fim_hssi_ss_tx_axis_if.client     hssi_ss_st_tx [MAX_NUM_ETH_CHANNELS-1:0],
-   ofs_fim_hssi_ss_rx_axis_if.client     hssi_ss_st_rx [MAX_NUM_ETH_CHANNELS-1:0],
-   ofs_fim_hssi_fc_if.client             hssi_fc [MAX_NUM_ETH_CHANNELS-1:0],
-   input logic [MAX_NUM_ETH_CHANNELS-1:0] i_hssi_clk_pll,
+   // ofs_fim_hssi_ss_tx_axis_if.client     hssi_ss_st_tx [MAX_NUM_ETH_CHANNELS-1:0],
+   // ofs_fim_hssi_ss_rx_axis_if.client     hssi_ss_st_rx [MAX_NUM_ETH_CHANNELS-1:0],
+   // ofs_fim_hssi_fc_if.client             hssi_fc [MAX_NUM_ETH_CHANNELS-1:0],
+   // input logic [MAX_NUM_ETH_CHANNELS-1:0] i_hssi_clk_pll,
+
+   ofs_fim_hssi_ss_tx_axis_if.client     hssi_ss_st_tx [JASON_MAX_NUM_ETH_CH-1:0],
+   ofs_fim_hssi_ss_rx_axis_if.client     hssi_ss_st_rx [JASON_MAX_NUM_ETH_CH-1:0],
+   ofs_fim_hssi_fc_if.client             hssi_fc [JASON_MAX_NUM_ETH_CH-1:0],
+   input logic [JASON_MAX_NUM_ETH_CH-1:0] i_hssi_clk_pll,
 `endif
 
    ofs_fim_axi_lite_if.slave   axi_s_if
@@ -174,8 +212,13 @@ pr_slot #(
    .PORT_PF_VF_INFO       (PORT_PF_VF_INFO),
    .EMIF                  (EMIF),
    .NUM_MEM_CH            (NUM_MEM_CH),
+   `ifdef INCLUDE_HSSI
+   .JASON_MAX_NUM_ETH_CH            (JASON_MAX_NUM_ETH_CH), // Number of HSSI channels in the PR region
+   `endif
    .PG_NUM_RTABLE_ENTRIES (PG_NUM_RTABLE_ENTRIES),
-   .PG_PFVF_ROUTING_TABLE (PG_PFVF_ROUTING_TABLE)
+   .PG_PFVF_ROUTING_TABLE (PG_PFVF_ROUTING_TABLE),
+   .JASON_NUM_IOPIPES(JASON_NUM_IOPIPES),
+   .JASON_IOPIPES_WIDTH(JASON_IOPIPES_WIDTH)
 ) pr_slot (
    .clk,
    .clk_div2,
@@ -210,6 +253,9 @@ pr_slot #(
    .axi_tx_b_if,
    .axi_rx_b_if,
 
+   .udp_avst_from_kernel,
+   .udp_avst_to_kernel,
+   
    // HSSI interface
 `ifdef INCLUDE_HSSI
    .hssi_ss_st_tx    (hssi_ss_st_tx),
@@ -405,6 +451,16 @@ remote_stp_top#(
 // ----------------------------------------------------------------------------------------------------
 //  PR Controller Inst
 // ----------------------------------------------------------------------------------------------------
+
+logic [1:0] o_pr_reset;
+logic [1:0] o_pr_freeze;
+
+assign pr_reset = o_pr_reset[0];
+assign pr_freeze = o_pr_freeze[0];
+
+assign port2_reset = o_pr_reset[1];
+assign port2_freeze = o_pr_freeze[1];
+
 `ifdef INCLUDE_PR
 pr_ctrl pr_ctrl (
    // Clks and Reset
@@ -418,8 +474,11 @@ pr_ctrl pr_ctrl (
    .pr_ctrl_io          (pr_ctrl_io),
 
    // PR to port signals
-   .o_pr_reset          (pr_reset),
-   .o_pr_freeze         (pr_freeze)  // will be connected to freeze logic,  1=holds
+   // .o_pr_reset          (pr_reset),
+   // .o_pr_freeze         (pr_freeze)  // will be connected to freeze logic,  1=holds
+
+   .o_pr_reset          (o_pr_reset),
+   .o_pr_freeze         (o_pr_freeze)  // will be connected to freeze logic,  1=holds
 );
 `else
    always_comb begin

@@ -122,6 +122,56 @@ proc main {} {
     post_message "Executing: $cmd"
     post_message [exec {*}$cmd 2>@1]
 
+    ################################### PR REGION 2
+
+    # These environment variables are defined in the FIM build. They
+    # are expected to be carried over to PR builds by storing them in
+    # build_env_db.txt.
+    set partition [get_env_variable Q_PR_PARTITION_NAME_2]
+    post_message "Partition: ${partition}"
+    set fme_ifc_id [get_env_variable FME_IFC_ID_2]
+    post_message "FME interface ID: ${fme_ifc_id}"
+
+    # Input RBF file 
+    set rbf_fname "output_files/${revision}.${partition}.rbf"
+    if {! [file exists $rbf_fname]} {
+        post_message -type error "${rbf_fname} not found!"
+        project_close
+        exit 1
+    }
+
+    # Target GBS file name
+    set gbs_fname "output_files/${revision}.${partition}.gbs"
+
+    # Construct the packager command. The command name might be overridden
+    # by the PACKAGER environment variable.
+    if {[info exists ::env(PACKAGER)]} {
+        set cmd $::env(PACKAGER)
+    } else {
+        set cmd {packager}
+    }
+    set cmd [concat $cmd create-gbs]
+    set cmd [concat $cmd "--gbs=${gbs_fname}"]
+    set cmd [concat $cmd "--afu-json=${afu_json_file}"]
+    set cmd [concat $cmd "--rbf=${rbf_fname}"]
+    set cmd [concat $cmd "--set-value interface-uuid:${fme_ifc_id}"]
+    set cmd [concat $cmd [get_uclk_cfg "output_files/user_clock_freq.txt"]]
+
+    post_message "Executing: $cmd"
+    post_message [exec {*}$cmd 2>@1]
+
+
+
+
+
+
+
+
+
+
+
+
+
     project_close
 }
 

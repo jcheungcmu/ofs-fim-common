@@ -15,7 +15,7 @@
                                         <lock></lock>
                                         <description>afu_intf_dfh</description>
                                         <reset>
-                                                <value>0x3000010000002010</value>
+                                                <value>0x3000000100002010</value>
                                         </reset>
 
                                         <field>
@@ -37,7 +37,7 @@
                                         <field>
                                                 <name>eol</name>
                                                 <bitOffset>40</bitOffset>
-                                                <reset>0x1</reset>
+                                                <reset>0x0</reset>
                                                 <bitWidth>1</bitWidth>
                                                 <access>RO</access>
                                                 <description>End of List</description>
@@ -45,7 +45,7 @@
                                         <field>
                                                 <name>next_dfh_byte_offset</name>
                                                 <bitOffset>16</bitOffset>
-                                                <reset>0x0</reset>
+                                                <reset>0x10000</reset>
                                                 <bitWidth>24</bitWidth>
                                                 <access>RO</access>
                                                 <description>Next DFH Byte offset</description>

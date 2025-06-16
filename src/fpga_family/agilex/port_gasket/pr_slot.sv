@@ -9,6 +9,41 @@
 import pcie_ss_axis_pkg::*;
 import ofs_fim_eth_if_pkg::*;
 
+interface asp_avst_if #(
+   //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
+    parameter DATA_WIDTH        = 64
+);
+    logic                           valid;
+    logic                           ready;
+    logic [DATA_WIDTH-1:0]          data;
+    
+    modport source (
+        input  ready,
+        output valid, data
+    );
+    modport sink (
+        input  valid, data,
+        output ready
+    );
+endinterface : asp_avst_if
+
+module avst_freeze_bridge (
+   // input logic clk,
+   // input logic afu_reset,
+   input logic pr_freeze, 
+   asp_avst_if.sink avst_in, 
+   asp_avst_if.source avst_out
+);
+
+   always_comb begin 
+      avst_out.valid = (pr_freeze) ? '0 : avst_in.valid;
+      avst_out.data = avst_in.data;
+      avst_in.ready = (pr_freeze) ? '0 : avst_out.ready;
+   end 
+
+endmodule 
+
+
 module  pr_slot #(
    parameter PG_NUM_PORTS      = 1,  // Number of PCIe VF ports to PR region
    // PF/VF to which each port is mapped
@@ -17,6 +52,13 @@ module  pr_slot #(
 
    parameter EMIF              = 0,  // Emif enable
    parameter NUM_MEM_CH        = 2,  // Number of memory channel
+
+   parameter JASON_NUM_IOPIPES = 0,
+   parameter JASON_IOPIPES_WIDTH = 0,
+   `ifdef INCLUDE_HSSI
+   parameter JASON_MAX_NUM_ETH_CH       = 0, // Number of Ethernet channels in the PR region
+   `endif
+
    parameter PL_DEPTH          = 1,  // PCIe Port pipeline depth before PR region crossing
    parameter TDATA_WIDTH       = pcie_ss_axis_pkg::TDATA_WIDTH,
    parameter TUSER_WIDTH       = pcie_ss_axis_pkg::TUSER_WIDTH,
@@ -49,12 +91,20 @@ module  pr_slot #(
    pcie_ss_axis_if.source      axi_tx_b_if,
    pcie_ss_axis_if.sink        axi_rx_b_if,
  
+   asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+   asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+
    // HSSI
 `ifdef INCLUDE_HSSI
-    ofs_fim_hssi_ss_tx_axis_if.client     hssi_ss_st_tx [MAX_NUM_ETH_CHANNELS-1:0],
-    ofs_fim_hssi_ss_rx_axis_if.client     hssi_ss_st_rx [MAX_NUM_ETH_CHANNELS-1:0],
-    ofs_fim_hssi_fc_if.client             hssi_fc [MAX_NUM_ETH_CHANNELS-1:0],
-    input logic [MAX_NUM_ETH_CHANNELS-1:0] i_hssi_clk_pll,
+   //  ofs_fim_hssi_ss_tx_axis_if.client     hssi_ss_st_tx [MAX_NUM_ETH_CHANNELS-1:0],
+   //  ofs_fim_hssi_ss_rx_axis_if.client     hssi_ss_st_rx [MAX_NUM_ETH_CHANNELS-1:0],
+   //  ofs_fim_hssi_fc_if.client             hssi_fc [MAX_NUM_ETH_CHANNELS-1:0],
+   //  input logic [MAX_NUM_ETH_CHANNELS-1:0] i_hssi_clk_pll,
+
+   ofs_fim_hssi_ss_tx_axis_if.client     hssi_ss_st_tx [JASON_MAX_NUM_ETH_CH-1:0],
+   ofs_fim_hssi_ss_rx_axis_if.client     hssi_ss_st_rx [JASON_MAX_NUM_ETH_CH-1:0],
+   ofs_fim_hssi_fc_if.client             hssi_fc [JASON_MAX_NUM_ETH_CH-1:0],
+   input logic [JASON_MAX_NUM_ETH_CH-1:0] i_hssi_clk_pll,
 `endif
 
    // JTAG interface for PR region remote STP support
@@ -80,8 +130,11 @@ module  pr_slot #(
     `endif
 
    logic pr_freeze_emif_q0, pr_freeze_emif_q1;
-   logic [MAX_NUM_ETH_CHANNELS-1:0] pr_freeze_hssi;
-   logic [MAX_NUM_ETH_CHANNELS-1:0] softreset_hssi;
+   // logic [MAX_NUM_ETH_CHANNELS-1:0] pr_freeze_hssi;
+   // logic [MAX_NUM_ETH_CHANNELS-1:0] softreset_hssi;
+
+
+
    logic pr_freeze_emif[NUM_MEM_CH-1: 0];
    logic softreset_emif[NUM_MEM_CH-1: 0];
 
@@ -268,11 +321,19 @@ end
        localparam HSSI_TX_REG_MODE    =ST_BYPASS; 
    `endif //INCLUDE_PR
  
-   ofs_fim_hssi_ss_tx_axis_if     hssi_afu_st_tx  [MAX_NUM_ETH_CHANNELS-1:0] ();
-   ofs_fim_hssi_ss_rx_axis_if     hssi_afu_st_rx [MAX_NUM_ETH_CHANNELS-1:0] ();
-   ofs_fim_hssi_fc_if             hssi_afu_fc [MAX_NUM_ETH_CHANNELS-1:0] ();
+   // ofs_fim_hssi_ss_tx_axis_if     hssi_afu_st_tx  [MAX_NUM_ETH_CHANNELS-1:0] ();
+   // ofs_fim_hssi_ss_rx_axis_if     hssi_afu_st_rx [MAX_NUM_ETH_CHANNELS-1:0] ();
+   // ofs_fim_hssi_fc_if             hssi_afu_fc [MAX_NUM_ETH_CHANNELS-1:0] ();
 
-   for (genvar j=0; j<MAX_NUM_ETH_CHANNELS; j++) begin : FREEZE_BRIDGES
+   ofs_fim_hssi_ss_tx_axis_if     hssi_afu_st_tx  [JASON_MAX_NUM_ETH_CH-1:0] ();
+   ofs_fim_hssi_ss_rx_axis_if     hssi_afu_st_rx [JASON_MAX_NUM_ETH_CH-1:0] ();
+   ofs_fim_hssi_fc_if             hssi_afu_fc [JASON_MAX_NUM_ETH_CH-1:0] ();
+
+   logic [JASON_MAX_NUM_ETH_CH-1:0] pr_freeze_hssi;
+   logic [JASON_MAX_NUM_ETH_CH-1:0] softreset_hssi;
+
+   // for (genvar j=0; j<MAX_NUM_ETH_CHANNELS; j++) begin : FREEZE_BRIDGES
+   for (genvar j=0; j<JASON_MAX_NUM_ETH_CH; j++) begin : FREEZE_BRIDGES
       fim_resync #(
          .INIT_VALUE (0),
          .NO_CUT     (0)
@@ -314,6 +375,28 @@ end
    end
 `endif
 
+   asp_avst_if #(.DATA_WIDTH(JASON_IOPIPES_WIDTH))    udp_avst_from_kernel_internal[JASON_NUM_IOPIPES-1:0]();
+   asp_avst_if #(.DATA_WIDTH(JASON_IOPIPES_WIDTH))   udp_avst_to_kernel_internal[JASON_NUM_IOPIPES-1:0]();
+   
+   for (genvar j=0; j<JASON_NUM_IOPIPES; j++) begin
+
+      avst_freeze_bridge avst_frz_bridge (
+         // .clk (clk),
+         // .afu_reset (softreset),
+         .pr_freeze (pr_freeze),
+         .avst_in (udp_avst_from_kernel_internal[j]),
+         .avst_out (udp_avst_from_kernel[j])
+      );
+
+      avst_freeze_bridge avst_frz_bridge2 (
+         // .clk (clk),
+         // .afu_reset (softreset),
+         .pr_freeze (pr_freeze),
+         .avst_in (udp_avst_to_kernel[j]),
+         .avst_out (udp_avst_to_kernel_internal[j])
+      );
+      
+   end 
 // ----------------------------------------------------------------------------------------------------
 // AFU Instance
 // ----------------------------------------------------------------------------------------------------
@@ -331,7 +414,9 @@ afu_main #(
    .PORT_PF_VF_INFO       (PORT_PF_VF_INFO),
    .NUM_MEM_CH            (NUM_MEM_CH),
    .PG_NUM_RTABLE_ENTRIES (PG_NUM_RTABLE_ENTRIES),
-   .PG_PFVF_ROUTING_TABLE (PG_PFVF_ROUTING_TABLE)
+   .PG_PFVF_ROUTING_TABLE (PG_PFVF_ROUTING_TABLE),
+   .JASON_NUM_IOPIPES     (JASON_NUM_IOPIPES)
+   // .MAX_ETH_CH            (JASON_MAX_NUM_ETH_CH) // Number of HSSI channels in the PR region
 ) afu_main (
    .clk,
    .clk_div2,
@@ -350,6 +435,9 @@ afu_main #(
    .afu_axi_tx_a_if    (axi_tx_a_if_t1),
    .afu_axi_rx_b_if    (axi_rx_b_if_t1),
    .afu_axi_tx_b_if    (axi_tx_b_if_t1),
+
+   .udp_avst_from_kernel (udp_avst_from_kernel_internal),
+   .udp_avst_to_kernel   (udp_avst_to_kernel_internal),
 
    `ifdef INCLUDE_HSSI
       .hssi_ss_st_tx    (hssi_afu_st_tx),

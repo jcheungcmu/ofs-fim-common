@@ -1,0 +1,8 @@
+	component fme_id_rom_2 is
+		port (
+			q       : out std_logic_vector(63 downto 0);                    -- dataout
+			address : in  std_logic_vector(2 downto 0)  := (others => 'X'); -- address
+			clock   : in  std_logic                     := 'X'              -- clk
+		);
+	end component fme_id_rom_2;
+

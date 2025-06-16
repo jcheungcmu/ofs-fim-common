@@ -22,6 +22,24 @@
 
 `include "fpga_defines.vh"
 
+interface asp_avst_if #(
+   //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
+    parameter DATA_WIDTH        = 64
+);
+    logic                           valid;
+    logic                           ready;
+    logic [DATA_WIDTH-1:0]          data;
+    
+    modport source (
+        input  ready,
+        output valid, data
+    );
+    modport sink (
+        input  valid, data,
+        output ready
+    );
+endinterface : asp_avst_if
+
 module afu_main 
 #(
    parameter PG_NUM_PORTS    = 1,
@@ -30,7 +48,10 @@ module afu_main
                 {PG_NUM_PORTS{pcie_ss_hdr_pkg::ReqHdr_pf_vf_info_t'(0)}},
 
    parameter NUM_MEM_CH      = 0,
-   parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS,
+   // parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS,
+   parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS/2,
+
+   parameter JASON_NUM_IOPIPES = 1,
 
    parameter int PG_NUM_RTABLE_ENTRIES = 3,
 
@@ -69,6 +90,11 @@ module afu_main
       // Local memory
       ofs_fim_emif_axi_mm_if.user ext_mem_if [NUM_MEM_CH-1:0],
    `endif
+
+   // asp_avst_if.source    udp_avst_from_kernel[ofs_fim_eth_plat_if_pkg::NUM_ETH_CHANNELS/2-1:0],
+   // asp_avst_if.sink      udp_avst_to_kernel[ofs_fim_eth_plat_if_pkg::NUM_ETH_CHANNELS/2-1:0],
+   asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+   asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
 
    `ifdef INCLUDE_HSSI
       ofs_fim_hssi_ss_tx_axis_if.client hssi_ss_st_tx [MAX_ETH_CH-1:0],
@@ -210,7 +236,8 @@ port_afu_instances #(
    .PG_NUM_PORTS    (PG_NUM_PORTS),
    .PORT_PF_VF_INFO (PORT_PF_VF_INFO),
    .NUM_MEM_CH      (NUM_MEM_CH),
-   .MAX_ETH_CH      (MAX_ETH_CH)
+   .MAX_ETH_CH      (MAX_ETH_CH),
+   .JASON_NUM_IOPIPES (JASON_NUM_IOPIPES)
 ) port_afu_instances (
    .clk           (clk),
    .clk_div2      (clk_div2),
@@ -220,6 +247,9 @@ port_afu_instances #(
    .rst_n         (rst_n),
    .port_rst_n    (port_rst_n_q2),
 
+   .udp_avst_from_kernel,
+   .udp_avst_to_kernel,
+   
 `ifdef INCLUDE_HSSI
    .hssi_ss_st_tx  (hssi_ss_st_tx),
    .hssi_ss_st_rx  (hssi_ss_st_rx),

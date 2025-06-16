@@ -7,3 +7,9 @@
 # The MIF file will be generated during the build by update_fme_ifc_id.py
 set_global_assignment -name MIF_FILE fme_id.mif
 set_global_assignment -name IP_FILE  $::env(BUILD_ROOT_REL)/ofs-common/src/common/fme_id_rom/fme_id_rom.ip
+
+set_global_assignment -name MIF_FILE fme_id_2.mif
+set_global_assignment -name IP_FILE  $::env(BUILD_ROOT_REL)/ofs-common/src/common/fme_id_rom/fme_id_rom_2.ip
+
+set_global_assignment -name MIF_FILE fme_id_3.mif
+set_global_assignment -name IP_FILE  $::env(BUILD_ROOT_REL)/ofs-common/src/common/fme_id_rom/fme_id_rom_3.ip

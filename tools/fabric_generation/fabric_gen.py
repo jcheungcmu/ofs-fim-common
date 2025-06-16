@@ -876,6 +876,7 @@ def read_configuration():
 
     fabric = args.fabric_name
     for entry in reg_config:
+        # print(entry)
         if entry.startswith('#'):
             continue
 

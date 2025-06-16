@@ -235,8 +235,8 @@ module  protocol_checker_csr
    // *default reset value wires..
    // ******************************************************
   logic   [03:00] feature_type_default = 4'h3;
-  logic           eol_default = 1'b1;
-  logic   [23:00] next_dfh_byte_offset_default = 24'h0;
+  logic           eol_default = 1'b0;
+  logic   [23:00] next_dfh_byte_offset_default = 24'h10000;
   logic   [03:00] feature_rev_default = 4'h2;
   logic   [11:00] feature_id_default = 12'h10;
   logic   [63:00] scratchpad_default = 64'h0;
@@ -329,10 +329,18 @@ module  protocol_checker_csr
    // ### Below here is specific to the protocol checker CSRs only. ###
    // ### It is not part of the common template                     ###
    // #################################################################
-   t_prtcl_chkr_err_vector error_vector_csr, error_vector_csr_out;
+   t_prtcl_chkr_err_vector error_vector_r2;
+   t_prtcl_chkr_err_vector error_vector_r3;
+   t_prtcl_chkr_err_vector error_vector_r4;
+   t_prtcl_chkr_err_vector error_vector_r5;
+   t_prtcl_chkr_err_vector error_vector_r6;
+   t_prtcl_chkr_err_vector error_vector_or;
+   t_prtcl_chkr_err_vector error_vector_csr;
    
    logic                  freeze_first_err_regs;
+   logic                  blockingtraffic; // When a one is returned on blockingtraffic, it signifies that the RTL is
    logic                  timeout_info_regs_locked_down;
+   
    
    // blocking traffic as a result of the protocol error logic detecting an
    // error. We never actually set this bit to one in the rtl, It is done by
@@ -343,7 +351,6 @@ module  protocol_checker_csr
    // Start Manual RTL Coading (common to all templates)
    // ***************************************
    
-
    axi_lite2mmio axi_lite2mmio
      (
       .clk    (clk_csr),
@@ -351,14 +358,13 @@ module  protocol_checker_csr
       .lite_if(csr_lite_if),
       .mmio_if(csr_if)
       );
-
+   
    //---------------------------------
    // Map AXI write/read request to CSR write/read,
    // and send the write/read response back
    //---------------------------------
-   ofs_fim_axi_csr_slave #(
-      .ADDR_WIDTH ($bits(csr_waddr))
-   ) mc_csr_slave (
+   ofs_fim_axi_csr_slave mc_csr_slave
+     (
       .csr_if             (csr_if),
       
       .csr_write          (csr_write),
@@ -416,41 +422,30 @@ module  protocol_checker_csr
    // ### Below here is specific to the protocol checker CSRs only. ###
    // ### It is not part of the common template                     ###
    // #################################################################
-   logic err_dcfifo_wrreq;
-   logic err_dcfifo_rdreq;
-   logic err_dcfifo_rdempty;
-
-   assign err_dcfifo_wrreq = |i_error_vector;
-   assign err_dcfifo_rdreq = ~err_dcfifo_rdempty;
-
-   fim_dcfifo #(
-      .DATA_WIDTH               ($bits(i_error_vector)),
-      .ALMOST_FULL_THRESHOLD    (4),
-      .DEPTH_RADIX              (3),
-      .OVERFLOW_CHECKING_PARAM  ("OFF"),    
-      .UNDERFLOW_CHECKING_PARAM ("OFF"),
-      .LPM_SHOWAHEAD_PARAM      ("ON")
-   ) fim_dcfifo_inst (
-      .aclr      (~rst_n_csr),
-      .wrclk     (clk),
-      .wrreq     (|i_error_vector),
-      .data      (i_error_vector),
-      .wrempty   (),
-      .wrfull    (),
-      .wralmfull (),
-      .wrusedw   (),
-
-      .q         (error_vector_csr_out),
-      .rdempty   (err_dcfifo_rdempty),
-      .rdfull    (),
-      .rdusedw   (),
-      .rdclk     (clk_csr),
-      .rdreq     (err_dcfifo_rdreq)
-    
-   );
+   always_ff @(posedge clk) begin
+      error_vector_r2 <= i_error_vector;
+      error_vector_r3 <= error_vector_r2 | i_error_vector;
+      error_vector_r4 <= error_vector_r3 | error_vector_r2;
+      error_vector_r5 <= error_vector_r4 | error_vector_r3;
+      error_vector_r6 <= error_vector_r5 | error_vector_r4;
+      error_vector_or <= error_vector_r2 | error_vector_r3 |
+                         error_vector_r4 | error_vector_r5 |
+                         error_vector_r6;
+      
+   end
    
-   assign error_vector_csr = err_dcfifo_rdreq ? error_vector_csr_out : '0;
-
+   fim_resync #(
+                .SYNC_CHAIN_LENGTH(3),
+                .WIDTH($bits(t_prtcl_chkr_err_vector)),
+                .INIT_VALUE(0),
+                .NO_CUT(0)
+                ) rst_hs_resync (
+                                 .clk   (clk_csr),
+                                 .reset (!rst_n_csr),
+                                 .d     (error_vector_or),
+                                 .q     (error_vector_csr)
+                                 );
+   
    //error_vector_csr.set_tx_req_counter_oflow_err = 1'b0;                                      // 15
    assign   set_malformed_tlp_err               = error_vector_csr.malformed_tlp;               // 14
    assign   set_max_payload_err                 = error_vector_csr.max_payload;                 // 13
@@ -467,6 +462,8 @@ module  protocol_checker_csr
    assign   set_tx_mwr_data_payload_overrun_err = error_vector_csr.tx_mwr_data_payload_overrun; // 02
    assign   set_tx_mwr_insufficient_data_err    = error_vector_csr.tx_mwr_insufficient_data;    // 01
    //error_vector_csr.set_tx_valid_violation_err    = 1'b0;                                     // 00                
+   
+   assign  blockingtraffic = 0;             // confused for a reserved bit
    
    //----------------------------------------------------------------------------
    // FIRST ERROR signals

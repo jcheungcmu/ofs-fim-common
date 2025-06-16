@@ -76,8 +76,8 @@ table tr#BLUE  {background-color:blue; color:white;}
 <tr id="BLUE"><td><a NAME="r0x000"</a><b>afu_intf_dfh</b></td><td><b>0x000</b></td><td></td><td></td><td></td></tr>
 <tr> <td><b>Register</b></td> <td><b>Bits</b></td> <td><b>Access</b></td> <td><b>Reset</b></td> <td><b>Description</b></td> </tr>
 <tr> <td><b>feature_type</b>[03:00]</td> <td><b>63:60</b></td> <td>RO</td><td>0x3</td><td>Feature Type = Private Feature</td> </tr>
-<tr> <td>reserved</td> <td>59:41</td> <td>RsvdZ</td> <td>0</td> <td> </td> </tr><td><b>eol</b></td> <td><b>40</b></td> <td>RO</td><td>0x1</td><td>End of List</td> </tr>
-<td><b>next_dfh_byte_offset</b>[23:00]</td> <td><b>39:16</b></td> <td>RO</td><td>0x0</td><td>Next DFH Byte offset</td> </tr>
+<tr> <td>reserved</td> <td>59:41</td> <td>RsvdZ</td> <td>0</td> <td> </td> </tr><td><b>eol</b></td> <td><b>40</b></td> <td>RO</td><td>0x0</td><td>End of List</td> </tr>
+<td><b>next_dfh_byte_offset</b>[23:00]</td> <td><b>39:16</b></td> <td>RO</td><td>0x10000</td><td>Next DFH Byte offset</td> </tr>
 <td><b>feature_rev</b>[03:00]</td> <td><b>15:12</b></td> <td>RO</td><td>0x2</td><td>feature revision</td> </tr>
 <td><b>feature_id</b>[11:00]</td> <td><b>11:00</b></td> <td>RO</td><td>0x10</td><td>feature ID</td> </tr>
 <tr>  <td>| </td>  <td> </td>  <td> </td>  <td>  </td>  <td> </td> </tr>
