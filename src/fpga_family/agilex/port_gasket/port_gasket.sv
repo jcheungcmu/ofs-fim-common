@@ -55,8 +55,8 @@ module  port_gasket #(
    parameter int PG_NUM_RTABLE_ENTRIES = 3,
    parameter pf_vf_mux_pkg::t_pfvf_rtable_entry[PG_NUM_RTABLE_ENTRIES-1:0] PG_PFVF_ROUTING_TABLE = {PG_NUM_RTABLE_ENTRIES{pf_vf_mux_pkg::t_pfvf_rtable_entry'(0)}}
 )(
-   // output                      uclk,
-   // output                      uclk_div2,
+   output                      uclk,
+   output                      uclk_div2,
 
    output                      port2_reset,
    output                      port2_freeze,
@@ -123,8 +123,8 @@ logic   [63:0]                      user_clk_freq_cmd_1;
 logic   [63:0]                      user_clk_freq_sts_0;
 logic   [63:0]                      user_clk_freq_sts_1;
 
-logic                               uclk;
-logic                               uclk_div2;
+// logic                               uclk;
+// logic                               uclk_div2;
 logic   [63:0]                      rst2csr_port_ctrl;
 logic   [63:0]                      csr2rst_port_ctrl;
 

@@ -190,19 +190,20 @@ module pr_ctrl (
    // Multiple AFUs are not supported in this implementation. Extending support 
    // involves designing a model to support masking off certain ports for PR
    // ============================================================================= 
-   assign pr_port_mask = 2'b00;
+   // assign pr_port_mask = 2'b00;
 
-   // always_comb begin 
-   //    unique case (req_pr_regionid_1x)
-   //       2'b00: pr_port_mask = 4'b0001;
-   //       2'b01: pr_port_mask = 4'b0010;
-   //       2'b10: pr_port_mask = 4'b0100;
-   //       2'b11: pr_port_mask = 4'b1000;
-   //    endcase
-   // end 
+   always_comb begin 
+      unique case (req_pr_regionid_1x)
+         2'b00: pr_port_mask = 4'b0001;
+         2'b01: pr_port_mask = 4'b0010;
+         2'b10: pr_port_mask = 4'b0100;
+         2'b11: pr_port_mask = 4'b1000;
+      endcase
+   end 
    
    assign o_pr_freeze  = pr_freeze & pr_port_mask;
-   assign o_pr_reset   = pr_reset  & pr_port_mask;
+   // assign o_pr_reset   = pr_reset  & pr_port_mask;
+   assign o_pr_reset   = pr_reset  & 4'b0000; // do not reset port with PR controller
 
    // ============================================================================= 
    // Update clk_2x Signals - From PR to FME

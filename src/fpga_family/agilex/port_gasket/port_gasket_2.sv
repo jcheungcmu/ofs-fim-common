@@ -55,8 +55,8 @@ module  port_gasket_2 #(
    parameter int PG_NUM_RTABLE_ENTRIES = 3,
    parameter pf_vf_mux_pkg::t_pfvf_rtable_entry[PG_NUM_RTABLE_ENTRIES-1:0] PG_PFVF_ROUTING_TABLE = {PG_NUM_RTABLE_ENTRIES{pf_vf_mux_pkg::t_pfvf_rtable_entry'(0)}}
 )(
-   // input                       uclk,
-   // input                       uclk_div2,
+   input                       uclk,
+   input                       uclk_div2,
 
    input                       port2_reset,
    input                       port2_freeze,
@@ -123,8 +123,8 @@ logic   [63:0]                      user_clk_freq_cmd_1;
 logic   [63:0]                      user_clk_freq_sts_0;
 logic   [63:0]                      user_clk_freq_sts_1;
 
-logic                               uclk;
-logic                               uclk_div2;
+// logic                               uclk;
+// logic                               uclk_div2;
 logic   [63:0]                      rst2csr_port_ctrl;
 logic   [63:0]                      csr2rst_port_ctrl;
 
@@ -271,22 +271,22 @@ pr_slot #(
 // ----------------------------------------------------------------------------------------------------
 //  User Clock Inst
 // ----------------------------------------------------------------------------------------------------
-user_clock user_clock (
-  .refclk              (refclk),
-  .clk_csr,  //source-clk of user_clk_freq_cmd_? data; dest-clk of user_clk_freq_sts_? data.
-  .clk_100             (clk_100),
+// user_clock user_clock (
+//   .refclk              (refclk),
+//   .clk_csr,  //source-clk of user_clk_freq_cmd_? data; dest-clk of user_clk_freq_sts_? data.
+//   .clk_100             (clk_100),
 
-  .rst_n_csr,  //source-rst of user_clk_freq_cmd_? data; dest-rst of user_clk_freq_sts_? data.
-  .rst_n_clk100        (rst_n_100),
+//   .rst_n_csr,  //source-rst of user_clk_freq_cmd_? data; dest-rst of user_clk_freq_sts_? data.
+//   .rst_n_clk100        (rst_n_100),
 
-  .user_clk_freq_cmd_0 (user_clk_freq_cmd_0),
-  .user_clk_freq_cmd_1 (user_clk_freq_cmd_1),
-  .user_clk_freq_sts_0 (user_clk_freq_sts_0),
-  .user_clk_freq_sts_1 (user_clk_freq_sts_1),
+//   .user_clk_freq_cmd_0 (user_clk_freq_cmd_0),
+//   .user_clk_freq_cmd_1 (user_clk_freq_cmd_1),
+//   .user_clk_freq_sts_0 (user_clk_freq_sts_0),
+//   .user_clk_freq_sts_1 (user_clk_freq_sts_1),
 
-  .uclk                (uclk),
-  .uclk_div2           (uclk_div2)
-);
+//   .uclk                (uclk),
+//   .uclk_div2           (uclk_div2)
+// );
 
 
 // ----------------------------------------------------------------------------------------------------
