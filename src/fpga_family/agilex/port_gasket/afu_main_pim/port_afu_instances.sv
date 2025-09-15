@@ -19,6 +19,7 @@
 `endif
 
 import top_cfg_pkg::*;
+// import jason_pkg::*;
 
 // Is the PR build using the PIM? If so, this port_afu_instances() module
 // will be used. If the AFU provides its own port_afu_instances, typically by
@@ -29,7 +30,7 @@ import top_cfg_pkg::*;
 
 interface asp_avst_if #(
    //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
-    parameter DATA_WIDTH        = 64
+    parameter DATA_WIDTH        = 80
 );
     logic                           valid;
     logic                           ready;
