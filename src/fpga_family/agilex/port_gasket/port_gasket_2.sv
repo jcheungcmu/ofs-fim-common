@@ -28,7 +28,7 @@ interface asp_avst_if #(
     );
 endinterface : asp_avst_if
 
-module  port_gasket_2 #(
+module  port_gasket_slv #(
    parameter PG_NUM_PORTS      = 1,
    parameter NUM_PF       = top_cfg_pkg::FIM_NUM_PF,
    parameter NUM_VF       = top_cfg_pkg::FIM_NUM_VF,
