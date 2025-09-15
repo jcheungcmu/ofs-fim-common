@@ -9,24 +9,25 @@
 import pcie_ss_axis_pkg::*;
 import ofs_fim_if_pkg::*;
 import ofs_fim_eth_if_pkg::*;
+// import jason_pkg::*;
 
-interface asp_avst_if #(
-   //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
-    parameter DATA_WIDTH        = 64
-);
-    logic                           valid;
-    logic                           ready;
-    logic [DATA_WIDTH-1:0]          data;
+// interface asp_avst_if #(
+//    //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
+//     parameter DATA_WIDTH        = 64
+// );
+//     logic                           valid;
+//     logic                           ready;
+//     logic [DATA_WIDTH-1:0]          data;
     
-    modport source (
-        input  ready,
-        output valid, data
-    );
-    modport sink (
-        input  valid, data,
-        output ready
-    );
-endinterface : asp_avst_if
+//     modport source (
+//         input  ready,
+//         output valid, data
+//     );
+//     modport sink (
+//         input  valid, data,
+//         output ready
+//     );
+// endinterface : asp_avst_if
 
 module  port_gasket_slv #(
    parameter PG_NUM_PORTS      = 1,

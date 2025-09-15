@@ -201,8 +201,9 @@ module pr_ctrl (
       endcase
    end 
    
-   assign o_pr_freeze  = pr_freeze & pr_port_mask;
+   // assign o_pr_freeze  = pr_freeze & pr_port_mask;
    // assign o_pr_reset   = pr_reset  & pr_port_mask;
+   assign o_pr_freeze  = pr_freeze & 4'b0000;
    assign o_pr_reset   = pr_reset  & 4'b0000; // do not reset port with PR controller
 
    // ============================================================================= 
