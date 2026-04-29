@@ -16,7 +16,8 @@ module dma_ddr_selector #(
    assign selected_ddr_mem.clk = ddr_mem[0].clk;
    assign selected_ddr_mem.reset_n = ddr_mem[0].reset_n;
 
-   localparam SEL_WIDTH = $clog2(NUM_LOCAL_MEM_BANKS);
+   // localparam SEL_WIDTH = $clog2(NUM_LOCAL_MEM_BANKS);
+   localparam SEL_WIDTH = 1;
    logic [SEL_WIDTH:0] channel_select;
 
    always_comb begin
@@ -95,6 +96,7 @@ module dma_ddr_selector #(
                ddr_mem[i].wvalid  = 'b0;
                ddr_mem[i].w       = 'b0;
                ddr_mem[i].bready  = 'b1;
+            
             if (channel_select == i) begin
                ddr_mem[i].arvalid = selected_ddr_mem.arvalid;
                ddr_mem[i].ar      = selected_ddr_mem.ar;

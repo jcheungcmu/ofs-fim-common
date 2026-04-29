@@ -28,9 +28,26 @@ import top_cfg_pkg::*;
 // afu_synth_setup/afu_sim_setup scripts.
 `ifndef AFU_TOP_REQUIRES_AFU_MAIN_IF
 
-interface asp_avst_if #(
-   //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
-    parameter DATA_WIDTH        = 80
+// interface asp_avst_if #(
+//    //  parameter DATA_WIDTH        = ofs_fim_eth_if_pkg::ETH_PACKET_WIDTH
+//     parameter DATA_WIDTH        = 40
+// );
+//     logic                           valid;
+//     logic                           ready;
+//     logic [DATA_WIDTH-1:0]          data;
+    
+//     modport source (
+//         input  ready,
+//         output valid, data
+//     );
+//     modport sink (
+//         input  valid, data,
+//         output ready
+//     );
+// endinterface : asp_avst_if
+
+interface asp_avst_if_data #(
+    parameter DATA_WIDTH        = 96
 );
     logic                           valid;
     logic                           ready;
@@ -44,7 +61,24 @@ interface asp_avst_if #(
         input  valid, data,
         output ready
     );
-endinterface : asp_avst_if
+endinterface : asp_avst_if_data
+
+interface asp_avst_if_ctrl #(
+    parameter DATA_WIDTH        = 32
+);
+    logic                           valid;
+    logic                           ready;
+    logic [DATA_WIDTH-1:0]          data;
+    
+    modport source (
+        input  ready,
+        output valid, data
+    );
+    modport sink (
+        input  valid, data,
+        output ready
+    );
+endinterface : asp_avst_if_ctrl
 
 module port_afu_instances # (
    parameter PG_NUM_PORTS    = 1,
@@ -54,7 +88,8 @@ module port_afu_instances # (
 
    parameter NUM_MEM_CH      = 0,
    parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS,
-   parameter JASON_NUM_IOPIPES = 16
+   parameter JASON_NUM_IOPIPES_DATA = 1,
+   parameter JASON_NUM_IOPIPES_CTRL = 1
 )(
    input  logic clk,
    input  logic clk_div2,
@@ -67,8 +102,14 @@ module port_afu_instances # (
 
    // asp_avst_if.source    udp_avst_from_kernel[ofs_fim_eth_plat_if_pkg::NUM_ETH_CHANNELS/2-1:0],
    // asp_avst_if.sink      udp_avst_to_kernel[ofs_fim_eth_plat_if_pkg::NUM_ETH_CHANNELS/2-1:0],
-   asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
-   asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+   // asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+   // asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+
+   asp_avst_if_data.source    udp_avst_from_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+   asp_avst_if_data.sink       udp_avst_to_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+
+   asp_avst_if_ctrl.source    udp_avst_from_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
+   asp_avst_if_ctrl.sink       udp_avst_to_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
 
    // PCIe A ports are the standard TLP channels. All host responses
    // arrive on the RX A port.
@@ -253,8 +294,14 @@ assign plat_ifc.other.ports[0].sample_state = 32'hcafef00d;
 
 `PLATFORM_SHIM_MODULE_NAME `PLATFORM_SHIM_MODULE_NAME (
    .plat_ifc,
-   .udp_avst_from_kernel,
-   .udp_avst_to_kernel
+   // .udp_avst_from_kernel,
+   // .udp_avst_to_kernel
+
+   .udp_avst_from_kernel_data,
+   .udp_avst_to_kernel_data,
+
+   .udp_avst_from_kernel_ctrl,
+   .udp_avst_to_kernel_ctrl
 );
 
 `endif //  `ifndef OPAE_PLATFORM_GEN

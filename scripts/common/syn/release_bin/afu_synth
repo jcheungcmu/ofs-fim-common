@@ -58,6 +58,8 @@ export OPAE_PLATFORM_ROOT=${OPAE_PLATFORM_ROOT:-"$(dirname -- "${SCRIPT_DIR}")"}
 export PACKAGER=${PACKAGER:-packager}
 GBS_FILE=${GBS_FILE:-$(basename "${AFU_JSON}" .json).gbs}
 GBS_FILE_2=${GBS_FILE_2:-$(basename "${AFU_JSON}" .json)_2.gbs}
+GBS_FILE_3=${GBS_FILE_3:-$(basename "${AFU_JSON}" .json)_3.gbs}
+GBS_FILE_4=${GBS_FILE_4:-$(basename "${AFU_JSON}" .json)_4.gbs}
 
 if ! "${PACKAGER}" >/dev/null; then
     echo "ERROR: Packager tool '${PACKAGER}' failed to run. Please check \$PATH and installation." 1>&2
@@ -76,6 +78,8 @@ fi
 echo "Compiling ${Q_PROJECT} ${Q_PR_REVISION}"
 echo "Generating ${GBS_FILE}"
 echo "Generating ${GBS_FILE_2}"
+echo "Generating ${GBS_FILE_3}"
+echo "Generating ${GBS_FILE_4}"
 echo "=================================="
 
 # Clean up from previous compilation
@@ -109,6 +113,16 @@ if [ ! -f "${QUARTUS_BUILD_DIR}"/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_
     exit 1
 fi
 
+if [ ! -f "${QUARTUS_BUILD_DIR}"/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_NAME_3}.gbs ]; then
+    echo "${QUARTUS_BUILD_DIR}/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_NAME_3}.gbs not found!"
+    exit 1
+fi
+
+if [ ! -f "${QUARTUS_BUILD_DIR}"/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_NAME_4}.gbs ]; then
+    echo "${QUARTUS_BUILD_DIR}/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_NAME_4}.gbs not found!"
+    exit 1
+fi
+
 if [ ! -f "${GBS_FILE}" ]; then
     ln -s "${QUARTUS_BUILD_DIR}"/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_NAME}.gbs "${GBS_FILE}"
 fi
@@ -117,6 +131,18 @@ if [ ! -f "${GBS_FILE_2}" ]; then
     ln -s "${QUARTUS_BUILD_DIR}"/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_NAME_2}.gbs "${GBS_FILE_2}"
 fi
 
+if [ ! -f "${GBS_FILE_3}" ]; then
+    ln -s "${QUARTUS_BUILD_DIR}"/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_NAME_3}.gbs "${GBS_FILE_3}"
+fi
+
+if [ ! -f "${GBS_FILE_4}" ]; then
+    ln -s "${QUARTUS_BUILD_DIR}"/output_files/${Q_PR_REVISION}.${Q_PR_PARTITION_NAME_4}.gbs "${GBS_FILE_4}"
+fi
+
+
+
+
+
 
 
 echo ""
@@ -124,6 +150,8 @@ echo "==========================================================================
 echo " PR AFU compilation complete"
 echo " AFU gbs file is '${GBS_FILE}'"
 echo " AFU gbs file is '${GBS_FILE_2}'"
+echo " AFU gbs file is '${GBS_FILE_3}'"
+echo " AFU gbs file is '${GBS_FILE_4}'"
 
 TIMING_SUMMARY_FILE="${QUARTUS_BUILD_DIR}"/output_files/timing_report/clocks.sta.fail.summary
 if [ -s "${TIMING_SUMMARY_FILE}" ]; then

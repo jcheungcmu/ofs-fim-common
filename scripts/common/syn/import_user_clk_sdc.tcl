@@ -13,6 +13,10 @@ proc setup_user_clk_sdc { user_clks_regexp uclk_max_freq ofile_name } {
   # Two user clocks should be found
   set user_clk_coll [get_clocks $user_clks_regexp]
   set n_user_clks [get_collection_size $user_clk_coll]
+  if {${n_user_clks} != 2} {
+    post_message -type error "Expected 2 user clocks, found ${n_user_clks}"
+    qexit -error
+  }
 
   # Convert the 2 entry clocks collection to a list
   set user_clks [list]
@@ -22,8 +26,6 @@ proc setup_user_clk_sdc { user_clks_regexp uclk_max_freq ofile_name } {
     lappend user_clk_periods [get_clock_info $clk -period]
   }
 
-  post_message -type info "User clocks: ${user_clks}"
-  post_message -type info "User clock periods: ${user_clk_periods}"
   # Sort by period, with slow clock first
   if {[get_clock_info [lindex $user_clks 0] -period] < [get_clock_info [lindex $user_clks 1] -period]} {
     set user_clks [lreverse $user_clks]
@@ -50,10 +52,10 @@ proc setup_user_clk_sdc { user_clks_regexp uclk_max_freq ofile_name } {
     lappend user_clk_master_names [get_clock_info $clk -master_clock]
   }
 
-  # if {[llength $base_user_clks] != 2} {
-  #   post_message -type error "Expected 2 clocks"
-  #   qexit -error
-  # }
+  if {[llength $base_user_clks] != 2} {
+    post_message -type error "Expected 2 clocks"
+    qexit -error
+  }
 
   #
   # At this point we have a pair of 2 entry lists.  One is the set of base user clocks
@@ -63,20 +65,11 @@ proc setup_user_clk_sdc { user_clks_regexp uclk_max_freq ofile_name } {
 
   # Are the base user clocks the same for low and high?
   if {[lindex $base_user_clks 0] == [lindex $base_user_clks 1]} {
-    post_message -type info "base user clocks are the same"
     # Pass a single entry list to the emitter, indicating a shared clock
     emit_user_clk_cfg [list [lindex $base_user_clks 0]] $user_clk_names $uclk_max_freq $ofile_name
   } else {
-    post_message -type info "base user clocks are NOT the same"
     emit_user_clk_cfg $base_user_clks $user_clk_names $uclk_max_freq $ofile_name
   }
-
-  # if {${n_user_clks} != 2} {
-  #   post_message -type error "Expected 2 user clocks, found ${n_user_clks}"
-  #   qexit -error
-  # }
-
-
 }
 
 
@@ -143,13 +136,6 @@ proc get_parent_clk_type { clk } {
 ## Emit the configuration file
 ##
 proc emit_user_clk_cfg { user_clks user_clk_names uclk_max_freq ofile_name } {
-
-  set length [llength $user_clks]
-  post_message -type info "num user clks is ${length}"
-
-  # post_message -type error "quit"
-  # qexit -error
-
   # What is the frequency of the primary clock?  We assume that all user clocks share
   # the same primary.
   set p_clk [get_parent_clk [lindex $user_clks 0]]
@@ -161,13 +147,6 @@ proc emit_user_clk_cfg { user_clks user_clk_names uclk_max_freq ofile_name } {
 
   set uclkdiv2_name [lindex $user_clk_names 0]
   set uclk_name [lindex $user_clk_names 1]
-
-  # set uclkdiv2_name_0 [lindex $user_clk_names 0]
-  # set uclk_name_0 [lindex $user_clk_names 1]
-
-  # set uclkdiv2_name_1 [lindex $user_clk_names 2]
-  # set uclk_name_1 [lindex $user_clk_names 3]
-
 
   # Ensure the target directory is present
   file mkdir [file dirname $ofile_name]
@@ -183,21 +162,7 @@ proc emit_user_clk_cfg { user_clks user_clk_names uclk_max_freq ofile_name } {
   puts $of "namespace eval userClocks \{"
   puts $of "    variable u_clkdiv2_name \{${uclkdiv2_name}\}"
   puts $of "    variable u_clk_name \{${uclk_name}\}"
-
-  # puts $of "    variable u_clkdiv2_name_0 \{${uclkdiv2_name_0}\}"
-  # puts $of "    variable u_clk_name_0 \{${uclk_name_0}\}"
-
-  # puts $of "    variable u_clkdiv2_name_1 \{${uclkdiv2_name_1}\}"
-  # puts $of "    variable u_clk_name_1 \{${uclk_name_1}\}"
-
-  if {[llength $user_clks] == 4} {
-    set uclkdiv2_2 [lindex $user_clks 2]
-    set uclk_2 [lindex $user_clks 3]
-    set uclkdiv2 [lindex $user_clks 0]
-    set uclk [lindex $user_clks 1]
-    puts $of "    variable u_clkdiv2_fmax ${uclk_max_freq}"
-    puts $of "    variable u_clk_fmax ${uclk_max_freq}"
-  } elseif {[llength $user_clks] == 2} {
+  if {[llength $user_clks] == 2} {
     set uclkdiv2 [lindex $user_clks 0]
     set uclk [lindex $user_clks 1]
     puts $of "    variable u_clkdiv2_fmax ${uclk_max_freq}"
@@ -213,7 +178,7 @@ proc emit_user_clk_cfg { user_clks user_clk_names uclk_max_freq ofile_name } {
 
   puts $of "##"
   puts $of "## Constrain the user clocks given a list of targets, ordered low to high."
-  if {[llength $user_clks] == 2 || [llength $user_clks] == 4} {
+  if {[llength $user_clks] == 2} {
     puts $of "##   (The code assumes that the relative values of the low and high clocks"
     puts $of "##   are legal and treats them independently.)"
   } else {
@@ -233,22 +198,6 @@ proc emit_user_clk_cfg { user_clks user_clk_names uclk_max_freq ofile_name } {
   puts $of "    set mult_high \[expr \{int(ceil($p_clk_mult * \$u_clk_high_mhz))\}\]"
   set gen_high [user_clock_gen_str $uclk "high"]
   puts $of "    ${gen_high}"
-
-  if {[llength $user_clks] == 4} {
-    set gen_high_2 [user_clock_gen_str $uclk_2 "high"]
-    puts $of "    ${gen_high_2}"
-
-    puts $of ""
-    puts $of "    if \{\$u_clk_low_mhz > \$::userClocks::u_clkdiv2_fmax\} \{"
-    puts $of "        set u_clk_low_mhz \$::userClocks::u_clkdiv2_fmax"
-    puts $of "    \}"
-    puts $of "    set mult_low \[expr \{int(ceil($p_clk_mult * \$u_clk_low_mhz))\}\]"
-    set gen_low [user_clock_gen_str $uclkdiv2 "low"]
-    puts $of "    ${gen_low}"
-
-    set gen_low_2 [user_clock_gen_str $uclkdiv2_2 "low"]
-    puts $of "    ${gen_low_2}"
-  }
 
   if {[llength $user_clks] == 2} {
     puts $of ""

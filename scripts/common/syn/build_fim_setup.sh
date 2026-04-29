@@ -147,6 +147,8 @@ if [ ! -z ${Q_PR_REVISION} ]; then
     echo "Q_PR_REVISION=${Q_PR_REVISION}" >> build_env_db.txt
     echo "Q_PR_PARTITION_NAME=${Q_PR_PARTITION_NAME}" >> build_env_db.txt
     echo "Q_PR_PARTITION_NAME_2=${Q_PR_PARTITION_NAME_2}" >> build_env_db.txt
+    echo "Q_PR_PARTITION_NAME_3=${Q_PR_PARTITION_NAME_3}" >> build_env_db.txt
+    echo "Q_PR_PARTITION_NAME_4=${Q_PR_PARTITION_NAME_4}" >> build_env_db.txt
 fi
 
 # All the environment variables passed to build_env_db.txt must be defined

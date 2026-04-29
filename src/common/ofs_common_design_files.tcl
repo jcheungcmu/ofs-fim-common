@@ -66,4 +66,8 @@ set_global_assignment -name SOURCE_TCL_SCRIPT_FILE $::env(BUILD_ROOT_REL)/ofs-co
 #--------------------
 set_global_assignment -name SOURCE_TCL_SCRIPT_FILE $::env(BUILD_ROOT_REL)/ofs-common/src/common/lib/lib_design_files.tcl
 
+#--------------------
+#Common Library modules
+#--------------------
+set_global_assignment -name SOURCE_TCL_SCRIPT_FILE $::env(BUILD_ROOT_REL)/ofs-common/src/common/noc/noc_design_files.tcl
 

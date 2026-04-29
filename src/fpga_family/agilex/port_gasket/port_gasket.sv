@@ -47,8 +47,11 @@ module  port_gasket #(
    parameter EMIF              = 0,
    parameter NUM_MEM_CH        = 0,
 
-   parameter JASON_NUM_IOPIPES = 0,
-   parameter JASON_IOPIPES_WIDTH = 0,
+   parameter JASON_NUM_IOPIPES_DATA = 1,
+   parameter JASON_IOPIPES_WIDTH_DATA = 40,
+   parameter JASON_NUM_IOPIPES_CTRL = 1,
+   parameter JASON_IOPIPES_WIDTH_CTRL = 24,
+
    `ifdef INCLUDE_HSSI
    parameter JASON_MAX_NUM_ETH_CH       = 0, // Number of Ethernet channels in the PR region
    `endif
@@ -61,6 +64,12 @@ module  port_gasket #(
 
    output                      port2_reset,
    output                      port2_freeze,
+
+   output                      port3_reset,
+   output                      port3_freeze,
+
+   output                      port4_reset,
+   output                      port4_freeze,
    
    input                       refclk,
    input                       clk,
@@ -92,8 +101,13 @@ module  port_gasket #(
    ofs_fim_emif_axi_mm_if.user afu_mem_if  [NUM_MEM_CH-1:0],
 `endif
 
-   asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
-   asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+   // asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+   // asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+   asp_avst_if_data.source    udp_avst_from_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+   asp_avst_if_data.sink       udp_avst_to_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+
+   asp_avst_if_ctrl.source    udp_avst_from_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
+   asp_avst_if_ctrl.sink       udp_avst_to_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
 
 `ifdef INCLUDE_HSSI
    // ofs_fim_hssi_ss_tx_axis_if.client     hssi_ss_st_tx [MAX_NUM_ETH_CHANNELS-1:0],
@@ -218,8 +232,10 @@ pr_slot #(
    `endif
    .PG_NUM_RTABLE_ENTRIES (PG_NUM_RTABLE_ENTRIES),
    .PG_PFVF_ROUTING_TABLE (PG_PFVF_ROUTING_TABLE),
-   .JASON_NUM_IOPIPES(JASON_NUM_IOPIPES),
-   .JASON_IOPIPES_WIDTH(JASON_IOPIPES_WIDTH)
+   .JASON_NUM_IOPIPES_DATA(JASON_NUM_IOPIPES_DATA),
+   .JASON_IOPIPES_WIDTH_DATA(JASON_IOPIPES_WIDTH_DATA),
+   .JASON_NUM_IOPIPES_CTRL(JASON_NUM_IOPIPES_CTRL),
+   .JASON_IOPIPES_WIDTH_CTRL(JASON_IOPIPES_WIDTH_CTRL)
 ) pr_slot (
    .clk,
    .clk_div2,
@@ -254,8 +270,10 @@ pr_slot #(
    .axi_tx_b_if,
    .axi_rx_b_if,
 
-   .udp_avst_from_kernel,
-   .udp_avst_to_kernel,
+   .udp_avst_from_kernel_data,
+   .udp_avst_to_kernel_data,
+   .udp_avst_from_kernel_ctrl,
+   .udp_avst_to_kernel_ctrl,
    
    // HSSI interface
 `ifdef INCLUDE_HSSI
@@ -453,14 +471,21 @@ remote_stp_top#(
 //  PR Controller Inst
 // ----------------------------------------------------------------------------------------------------
 
-logic [1:0] o_pr_reset;
-logic [1:0] o_pr_freeze;
+logic [3:0] o_pr_reset;
+logic [3:0] o_pr_freeze;
 
 assign pr_reset = o_pr_reset[0];
 assign pr_freeze = o_pr_freeze[0];
 
 assign port2_reset = o_pr_reset[1];
 assign port2_freeze = o_pr_freeze[1];
+
+assign port3_reset = o_pr_reset[2];
+assign port3_freeze = o_pr_freeze[2];
+
+assign port4_reset = o_pr_reset[3];
+assign port4_freeze = o_pr_freeze[3];
+
 
 `ifdef INCLUDE_PR
 pr_ctrl pr_ctrl (

@@ -29,7 +29,7 @@ import ofs_fim_eth_if_pkg::*;
 //     );
 // endinterface : asp_avst_if
 
-module  port_gasket_2 #(
+module  port_gasket_4 #(
    parameter PG_NUM_PORTS      = 1,
    parameter NUM_PF       = top_cfg_pkg::FIM_NUM_PF,
    parameter NUM_VF       = top_cfg_pkg::FIM_NUM_VF,
@@ -305,7 +305,7 @@ pr_slot #(
 // ----------------------------------------------------------------------------------------------------
 //  PG CSR Inst
 // ----------------------------------------------------------------------------------------------------
-pg_csr_2 #(
+pg_csr_4 #(
    .END_OF_LIST     (END_OF_LIST),
    .NEXT_DFH_OFFSET (NEXT_DFH_OFFSET),
    .ADDR_WIDTH      (MM_ADDR_WIDTH),

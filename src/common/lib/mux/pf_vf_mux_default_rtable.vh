@@ -63,7 +63,8 @@
 // localparam NUM_TOP_RTABLE_ENTRIES = 1 + 
 // 				    ((NUM_SR_PORTS > 0)  ? 2 : 0) + 1;
 
-localparam NUM_TOP_RTABLE_ENTRIES = 3;
+// localparam NUM_TOP_RTABLE_ENTRIES = 3;
+localparam NUM_TOP_RTABLE_ENTRIES = 5;
 
 // Static region routing table data structure
 localparam NUM_SR_RTABLE_ENTRIES = (NUM_SR_PORTS > 0) ? NUM_SR_PORTS : 1;
@@ -104,6 +105,18 @@ function automatic t_top_pf_vf_entry_info get_top_pf_vf_entry_info();
             map[p].vf        =  0;  // Match any VF
             map[p].vf_active =  0;  //pf0vfs or pf1
             map[p].pfvf_port =  2;
+        end else if (p == 3) begin 
+            // Map the port gasket port 
+            map[p].pf        =  3;  //pf0vfs or pf1
+            map[p].vf        =  0;  // Match any VF
+            map[p].vf_active =  0;  //pf0vfs or pf1
+            map[p].pfvf_port =  3;
+        end else if (p == 4) begin 
+            // Map the port gasket port 
+            map[p].pf        =  4;  //pf0vfs or pf1
+            map[p].vf        =  0;  // Match any VF
+            map[p].vf_active =  0;  //pf0vfs or pf1
+            map[p].pfvf_port =  4;
         end else begin
             // Map the static AFU port to everything else
             map[p].pf        = -1;
@@ -137,7 +150,7 @@ function automatic t_sr_pf_vf_entry_info get_sr_pf_vf_entry_info();
     // Start from PF1 when VFs are enabled on PF0, else start
     // from PF2, PF0 is a device management port, PF0VF/PF1 is reserved for port gasket
     // cur_pf = (ENABLE_PG_SHARED_VF || PG_NUM_PORT == 0) ? 1 : 2;
-    cur_pf = (ENABLE_PG_SHARED_VF || PG_NUM_PORT == 0) ? 1 : 3;
+    cur_pf = (ENABLE_PG_SHARED_VF || PG_NUM_PORT == 0) ? 1 : 5;
     cur_vf = 0;
     mapping_vfs = 0;
 

@@ -29,12 +29,28 @@ import ofs_fim_eth_if_pkg::*;
 //     );
 // endinterface : asp_avst_if
 
-module avst_freeze_bridge (
+module avst_freeze_bridge_data (
    // input logic clk,
    // input logic afu_reset,
    input logic pr_freeze, 
-   asp_avst_if.sink avst_in, 
-   asp_avst_if.source avst_out
+   asp_avst_if_data.sink avst_in, 
+   asp_avst_if_data.source avst_out
+);
+
+   always_comb begin 
+      avst_out.valid = (pr_freeze) ? '0 : avst_in.valid;
+      avst_out.data = avst_in.data;
+      avst_in.ready = (pr_freeze) ? '0 : avst_out.ready;
+   end 
+
+endmodule 
+
+module avst_freeze_bridge_ctrl (
+   // input logic clk,
+   // input logic afu_reset,
+   input logic pr_freeze, 
+   asp_avst_if_ctrl.sink avst_in, 
+   asp_avst_if_ctrl.source avst_out
 );
 
    always_comb begin 
@@ -55,8 +71,11 @@ module  pr_slot #(
    parameter EMIF              = 0,  // Emif enable
    parameter NUM_MEM_CH        = 2,  // Number of memory channel
 
-   parameter JASON_NUM_IOPIPES = 0,
-   parameter JASON_IOPIPES_WIDTH = 0,
+   parameter JASON_NUM_IOPIPES_DATA = 1,
+   parameter JASON_IOPIPES_WIDTH_DATA = 40,
+   parameter JASON_NUM_IOPIPES_CTRL = 1,
+   parameter JASON_IOPIPES_WIDTH_CTRL = 24,
+   
    `ifdef INCLUDE_HSSI
    parameter JASON_MAX_NUM_ETH_CH       = 0, // Number of Ethernet channels in the PR region
    `endif
@@ -93,8 +112,14 @@ module  pr_slot #(
    pcie_ss_axis_if.source      axi_tx_b_if,
    pcie_ss_axis_if.sink        axi_rx_b_if,
  
-   asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
-   asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+   // asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+   // asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+
+   asp_avst_if_data.source    udp_avst_from_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+   asp_avst_if_data.sink       udp_avst_to_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+
+   asp_avst_if_ctrl.source    udp_avst_from_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
+   asp_avst_if_ctrl.sink       udp_avst_to_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
 
    // HSSI
 `ifdef INCLUDE_HSSI
@@ -377,28 +402,77 @@ end
    end
 `endif
 
-   asp_avst_if #(.DATA_WIDTH(JASON_IOPIPES_WIDTH))    udp_avst_from_kernel_internal[JASON_NUM_IOPIPES-1:0]();
-   asp_avst_if #(.DATA_WIDTH(JASON_IOPIPES_WIDTH))   udp_avst_to_kernel_internal[JASON_NUM_IOPIPES-1:0]();
+   asp_avst_if_data #(.DATA_WIDTH(JASON_IOPIPES_WIDTH_DATA))    udp_avst_from_kernel_data_internal[JASON_NUM_IOPIPES_DATA-1:0]();
+   asp_avst_if_data #(.DATA_WIDTH(JASON_IOPIPES_WIDTH_DATA))   udp_avst_to_kernel_data_internal[JASON_NUM_IOPIPES_DATA-1:0]();
    
-   for (genvar j=0; j<JASON_NUM_IOPIPES; j++) begin
+   asp_avst_if_ctrl #(.DATA_WIDTH(JASON_IOPIPES_WIDTH_CTRL))    udp_avst_from_kernel_ctrl_internal[JASON_NUM_IOPIPES_CTRL-1:0]();
+   asp_avst_if_ctrl #(.DATA_WIDTH(JASON_IOPIPES_WIDTH_CTRL))   udp_avst_to_kernel_ctrl_internal[JASON_NUM_IOPIPES_CTRL-1:0]();
+   
+   logic pr_freeze_iopipe_q0;
+   logic pr_freeze_iopipe_q1; 
 
-      avst_freeze_bridge avst_frz_bridge (
+   logic pr_freeze_iopipe;
+
+   // Flop freeze signal
+   always_ff @ (posedge clk) begin
+      pr_freeze_iopipe_q1   <= pr_freeze_iopipe_q0;
+      pr_freeze_iopipe_q0   <= pr_freeze;
+   end
+
+   fim_resync #(
+      .SYNC_CHAIN_LENGTH (2),
+      .WIDTH             (1),
+      .INIT_VALUE        (0),
+      .NO_CUT            (0)
+   ) ddr4_pr_freeze_sync (
+      .clk   (uclk_usr_div2),
+      .reset (1'b0),
+      .d     (pr_freeze_iopipe_q1),
+      .q     (pr_freeze_iopipe)
+   );
+
+   for (genvar j=0; j<JASON_NUM_IOPIPES_DATA; j++) begin
+
+
+      avst_freeze_bridge_data avst_frz_bridge_data (
          // .clk (clk),
          // .afu_reset (softreset),
-         .pr_freeze (pr_freeze),
-         .avst_in (udp_avst_from_kernel_internal[j]),
-         .avst_out (udp_avst_from_kernel[j])
+         .pr_freeze (pr_freeze_iopipe),
+         .avst_in (udp_avst_from_kernel_data_internal[j]),
+         .avst_out (udp_avst_from_kernel_data[j])
       );
 
-      avst_freeze_bridge avst_frz_bridge2 (
+      avst_freeze_bridge_data avst_frz_bridge_data2 (
          // .clk (clk),
          // .afu_reset (softreset),
-         .pr_freeze (pr_freeze),
-         .avst_in (udp_avst_to_kernel[j]),
-         .avst_out (udp_avst_to_kernel_internal[j])
+         .pr_freeze (pr_freeze_iopipe),
+         .avst_in (udp_avst_to_kernel_data[j]),
+         .avst_out (udp_avst_to_kernel_data_internal[j])
       );
       
    end 
+
+   for (genvar j=0; j<JASON_NUM_IOPIPES_CTRL; j++) begin
+
+      avst_freeze_bridge_ctrl avst_frz_bridge_ctrl (
+         // .clk (clk),
+         // .afu_reset (softreset),
+         .pr_freeze (pr_freeze_iopipe),
+         .avst_in (udp_avst_from_kernel_ctrl_internal[j]),
+         .avst_out (udp_avst_from_kernel_ctrl[j])
+      );
+
+      avst_freeze_bridge_ctrl avst_frz_bridge_ctrl2 (
+         // .clk (clk),
+         // .afu_reset (softreset),
+         .pr_freeze (pr_freeze_iopipe),
+         .avst_in (udp_avst_to_kernel_ctrl[j]),
+         .avst_out (udp_avst_to_kernel_ctrl_internal[j])
+      );
+      
+   end
+
+   
 // ----------------------------------------------------------------------------------------------------
 // AFU Instance
 // ----------------------------------------------------------------------------------------------------
@@ -417,7 +491,8 @@ afu_main #(
    .NUM_MEM_CH            (NUM_MEM_CH),
    .PG_NUM_RTABLE_ENTRIES (PG_NUM_RTABLE_ENTRIES),
    .PG_PFVF_ROUTING_TABLE (PG_PFVF_ROUTING_TABLE),
-   .JASON_NUM_IOPIPES     (JASON_NUM_IOPIPES)
+   .JASON_NUM_IOPIPES_DATA     (JASON_NUM_IOPIPES_DATA),
+   .JASON_NUM_IOPIPES_CTRL     (JASON_NUM_IOPIPES_CTRL)
    // .MAX_ETH_CH            (JASON_MAX_NUM_ETH_CH) // Number of HSSI channels in the PR region
 ) afu_main (
    .clk,
@@ -438,9 +513,12 @@ afu_main #(
    .afu_axi_rx_b_if    (axi_rx_b_if_t1),
    .afu_axi_tx_b_if    (axi_tx_b_if_t1),
 
-   .udp_avst_from_kernel (udp_avst_from_kernel_internal),
-   .udp_avst_to_kernel   (udp_avst_to_kernel_internal),
+   .udp_avst_from_kernel_data (udp_avst_from_kernel_data_internal),
+   .udp_avst_to_kernel_data   (udp_avst_to_kernel_data_internal),
 
+   .udp_avst_from_kernel_ctrl (udp_avst_from_kernel_ctrl_internal),
+   .udp_avst_to_kernel_ctrl   (udp_avst_to_kernel_ctrl_internal),
+   
    `ifdef INCLUDE_HSSI
       .hssi_ss_st_tx    (hssi_afu_st_tx),
       .hssi_ss_st_rx    (hssi_afu_st_rx),

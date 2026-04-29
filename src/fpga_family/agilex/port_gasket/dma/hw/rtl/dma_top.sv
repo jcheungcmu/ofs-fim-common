@@ -14,7 +14,11 @@
 //
 
 module dma_top #(
-    parameter NUM_LOCAL_MEM_BANKS = 2
+    parameter NUM_LOCAL_MEM_BANKS = 2,
+    parameter JASON_NUM_IOPIPES_DATA = 1,
+    parameter JASON_NUM_IOPIPES_CTRL = 1,
+    parameter JASON_IOPIPES_WIDTH_DATA = 40,
+    parameter JASON_IOPIPES_WIDTH_CTRL = 32
 )(
     // CSR interface (MMIO on the host)
     ofs_plat_axi_mem_lite_if.to_source mmio64_to_afu,
@@ -23,8 +27,14 @@ module dma_top #(
     ofs_plat_axi_mem_if.to_sink host_mem,
     ofs_plat_axi_mem_if.to_sink ddr_mem[NUM_LOCAL_MEM_BANKS],
 
-    asp_avst_if.source    udp_avst_from_kernel[1:0],
-    asp_avst_if.sink      udp_avst_to_kernel[1:0]
+    // asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+    // asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0]
+
+    asp_avst_if_data.source    udp_avst_from_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+    asp_avst_if_data.sink       udp_avst_to_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+
+    asp_avst_if_ctrl.source    udp_avst_from_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
+    asp_avst_if_ctrl.sink       udp_avst_to_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0]
 );
 
     // Each interface names its associated clock and reset.
@@ -38,31 +48,56 @@ module dma_top #(
     assign dest_mem.reset_n = reset_n; 
 
     ///////////// dummy logic 
-    logic invert;
-    logic [79:0] in_data [1:0];
+    // logic invert;
+    logic [JASON_IOPIPES_WIDTH_DATA-1:0] in_data_data [JASON_NUM_IOPIPES_DATA-1:0];
+    logic [JASON_IOPIPES_WIDTH_CTRL-1:0] in_data_ctrl [JASON_NUM_IOPIPES_CTRL-1:0];
 
-    always @(posedge clk) begin 
-        if (!reset_n) invert <= 0;
-        else invert <= ~invert;
-    end 
+    // always @(posedge clk) begin 
+    //     if (!reset_n) invert <= 0;
+    //     else invert <= ~invert;
+    // end 
 
-    assign udp_avst_from_kernel[0].valid = invert;
-    assign udp_avst_from_kernel[0].data = (udp_avst_from_kernel[0].ready) ? ~0 : 0;
-    assign udp_avst_to_kernel[0].ready = invert;
+    genvar i; 
+    generate 
+        for (i=0; i<JASON_NUM_IOPIPES_DATA; i=i+1) begin : gen_tieoff
+            assign udp_avst_from_kernel_data[i].valid = 1'b0;
+            assign udp_avst_from_kernel_data[i].data = (udp_avst_from_kernel_data[i].ready) ? ~0 : 0;
+            assign udp_avst_to_kernel_data[i].ready = 1'b0;
 
-    always @(posedge clk) begin 
-        if (udp_avst_to_kernel[0].valid & udp_avst_to_kernel[0].ready)
-            in_data[0] <= udp_avst_to_kernel[0].data;
-    end 
+            always @(posedge clk) begin 
+                if (udp_avst_to_kernel_data[i].valid & udp_avst_to_kernel_data[i].ready)
+                    in_data_data[i] <= udp_avst_to_kernel_data[i].data;
+            end 
+        end
 
-    assign udp_avst_from_kernel[1].valid = invert;
-    assign udp_avst_from_kernel[1].data = (udp_avst_from_kernel[1].ready) ? ~0 : 0;
-    assign udp_avst_to_kernel[1].ready = invert;
+        for (i=0; i<JASON_NUM_IOPIPES_CTRL; i=i+1) begin : gen_tieoff_ctrl
+            assign udp_avst_from_kernel_ctrl[i].valid = 1'b0;
+            assign udp_avst_from_kernel_ctrl[i].data = (udp_avst_from_kernel_ctrl[i].ready) ? ~0 : 0;
+            assign udp_avst_to_kernel_ctrl[i].ready = 1'b0;
 
-    always @(posedge clk) begin 
-        if (udp_avst_to_kernel[1].valid & udp_avst_to_kernel[1].ready)
-            in_data[1] <= udp_avst_to_kernel[1].data;
-    end 
+            always @(posedge clk) begin 
+                if (udp_avst_to_kernel_ctrl[i].valid & udp_avst_to_kernel_ctrl[i].ready)
+                    in_data_ctrl[i] <= udp_avst_to_kernel_ctrl[i].data;
+            end 
+        end
+    endgenerate
+    // assign udp_avst_from_kernel[0].valid = invert;
+    // assign udp_avst_from_kernel[0].data = (udp_avst_from_kernel[0].ready) ? ~0 : 0;
+    // assign udp_avst_to_kernel[0].ready = invert;
+
+    // always @(posedge clk) begin 
+    //     if (udp_avst_to_kernel[0].valid & udp_avst_to_kernel[0].ready)
+    //         in_data[0] <= udp_avst_to_kernel[0].data;
+    // end 
+
+    // assign udp_avst_from_kernel[1].valid = invert;
+    // assign udp_avst_from_kernel[1].data = (udp_avst_from_kernel[1].ready) ? ~0 : 0;
+    // assign udp_avst_to_kernel[1].ready = invert;
+
+    // always @(posedge clk) begin 
+    //     if (udp_avst_to_kernel[1].valid & udp_avst_to_kernel[1].ready)
+    //         in_data[1] <= udp_avst_to_kernel[1].data;
+    // end 
     /////////////
 
     // ====================================================================

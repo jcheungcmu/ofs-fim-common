@@ -1,12 +1,14 @@
 #### - '#' means comment
 # NAME   TYPE      BASEADDRESS    ADDRESS_WIDTH    SLAVES
 bpf         mst     n/a             20             st2mm
-st2mm       mst     n/a             20             achk,bpf,pr,pr_2,st2mm,uart
-mctp        mst     n/a             20             achk,bpf,pr,pr_2,st2mm,uart  
-uart        mst     n/a             20             achk,bpf,pr,pr_2,st2mm,uart
+st2mm       mst     n/a             20             achk,bpf,pr,pr_2,pr_3,pr_4,st2mm,uart
+mctp        mst     n/a             20             achk,bpf,pr,pr_2,pr_3,pr_4,st2mm,uart  
+uart        mst     n/a             20             achk,bpf,pr,pr_2,pr_3,pr_4,st2mm,uart
 bpf         slv     0x00000         18             n/a
 st2mm       slv     0x40000         16             n/a
 uart        slv     0x60000         12             n/a
 pr          slv     0x70000         16             n/a
 achk        slv     0x80000         16             n/a
 pr_2        slv     0x90000         16             n/a
+pr_3        slv     0xa0000         16             n/a
+pr_4        slv     0xb0000         16             n/a

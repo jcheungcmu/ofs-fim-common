@@ -1129,7 +1129,7 @@ assign fme_csr_fab_capability_update.fab_capability.reserved30     = {34{1'b0}};
 assign fme_csr_fab_capability_update.fab_capability.addr_width     = 6'd20;
 assign fme_csr_fab_capability_update.fab_capability.reserved20     = {4{1'b0}};
 // assign fme_csr_fab_capability_update.fab_capability.num_ports      = 3'd1;
-assign fme_csr_fab_capability_update.fab_capability.num_ports      = 3'd2;
+assign fme_csr_fab_capability_update.fab_capability.num_ports      = 3'd4;
 assign fme_csr_fab_capability_update.fab_capability.reserved13     = {4{1'b0}};
 assign fme_csr_fab_capability_update.fab_capability.pcie0_link     = 1'b1;
 assign fme_csr_fab_capability_update.fab_capability.reserved8      = {4{1'b0}};
@@ -1164,7 +1164,7 @@ assign fme_csr_port2_offset_update.port_offset.reserved57        = 3'b000;
 assign fme_csr_port2_offset_update.port_offset.decouple_port_csr = 1'b0;
 assign fme_csr_port2_offset_update.port_offset.afu_access_ctrl   = 1'b0;
 assign fme_csr_port2_offset_update.port_offset.reserved35        = {20{1'b0}};
-assign fme_csr_port2_offset_update.port_offset.bar_id            = 3'd0; // PF BAR0 - WAS BAR2
+assign fme_csr_port2_offset_update.port_offset.bar_id            = 3'd7; // PF BAR0 - WAS BAR2
 assign fme_csr_port2_offset_update.port_offset.reserved24        = 8'h00;
 assign fme_csr_port2_offset_update.port_offset.port_byte_offset  = 24'h100000;
 // Port3---------------------------------------------------------------------------------------------------
@@ -1175,7 +1175,7 @@ assign fme_csr_port3_offset_update.port_offset.reserved57        = 3'b000;
 assign fme_csr_port3_offset_update.port_offset.decouple_port_csr = 1'b0;
 assign fme_csr_port3_offset_update.port_offset.afu_access_ctrl   = 1'b0;
 assign fme_csr_port3_offset_update.port_offset.reserved35        = {20{1'b0}};
-assign fme_csr_port3_offset_update.port_offset.bar_id            = 3'd0; // PF BAR0 - WAS BAR2
+assign fme_csr_port3_offset_update.port_offset.bar_id            = 3'd7; // PF BAR0 - WAS BAR2
 assign fme_csr_port3_offset_update.port_offset.reserved24        = 8'h00;
 assign fme_csr_port3_offset_update.port_offset.port_byte_offset  = 24'h180000;
 // Fabric Status-------------------------------------------------------------------------------------------

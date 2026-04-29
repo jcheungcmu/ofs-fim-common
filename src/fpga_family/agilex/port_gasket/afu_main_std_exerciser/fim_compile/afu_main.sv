@@ -52,7 +52,8 @@ module afu_main
    // parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS,
    parameter MAX_ETH_CH      = ofs_fim_eth_plat_if_pkg::MAX_NUM_ETH_CHANNELS/2,
 
-   parameter JASON_NUM_IOPIPES = 1,
+   parameter JASON_NUM_IOPIPES_DATA = 1,
+   parameter JASON_NUM_IOPIPES_CTRL = 1,
 
    parameter int PG_NUM_RTABLE_ENTRIES = 3,
 
@@ -94,8 +95,11 @@ module afu_main
 
    // asp_avst_if.source    udp_avst_from_kernel[ofs_fim_eth_plat_if_pkg::NUM_ETH_CHANNELS/2-1:0],
    // asp_avst_if.sink      udp_avst_to_kernel[ofs_fim_eth_plat_if_pkg::NUM_ETH_CHANNELS/2-1:0],
-   asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
-   asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0],
+   asp_avst_if_data.source    udp_avst_from_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+   asp_avst_if_data.sink       udp_avst_to_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+
+   asp_avst_if_ctrl.source    udp_avst_from_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
+   asp_avst_if_ctrl.sink       udp_avst_to_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
 
    `ifdef INCLUDE_HSSI
       ofs_fim_hssi_ss_tx_axis_if.client hssi_ss_st_tx [MAX_ETH_CH-1:0],
@@ -238,7 +242,8 @@ port_afu_instances #(
    .PORT_PF_VF_INFO (PORT_PF_VF_INFO),
    .NUM_MEM_CH      (NUM_MEM_CH),
    .MAX_ETH_CH      (MAX_ETH_CH),
-   .JASON_NUM_IOPIPES (JASON_NUM_IOPIPES)
+   .JASON_NUM_IOPIPES_DATA     (JASON_NUM_IOPIPES_DATA),
+   .JASON_NUM_IOPIPES_CTRL     (JASON_NUM_IOPIPES_CTRL)
 ) port_afu_instances (
    .clk           (clk),
    .clk_div2      (clk_div2),
@@ -248,8 +253,10 @@ port_afu_instances #(
    .rst_n         (rst_n),
    .port_rst_n    (port_rst_n_q2),
 
-   .udp_avst_from_kernel,
-   .udp_avst_to_kernel,
+   .udp_avst_from_kernel_data,
+   .udp_avst_to_kernel_data,
+   .udp_avst_from_kernel_ctrl,
+   .udp_avst_to_kernel_ctrl,
    
 `ifdef INCLUDE_HSSI
    .hssi_ss_st_tx  (hssi_ss_st_tx),

@@ -8,11 +8,24 @@
 //
 
 module ofs_plat_afu
+  #(
+    parameter JASON_NUM_IOPIPES_DATA = 1,
+    parameter JASON_NUM_IOPIPES_CTRL = 1,
+    parameter JASON_IOPIPES_WIDTH_DATA = 96,
+    parameter JASON_IOPIPES_WIDTH_CTRL = 32
+
+   )
+
    (
     // All platform wires, wrapped in one interface.
     ofs_plat_if plat_ifc,
-    asp_avst_if.source    udp_avst_from_kernel[1:0],
-    asp_avst_if.sink      udp_avst_to_kernel[1:0]
+    // asp_avst_if.source    udp_avst_from_kernel[JASON_NUM_IOPIPES-1:0],
+    // asp_avst_if.sink      udp_avst_to_kernel[JASON_NUM_IOPIPES-1:0]
+    asp_avst_if_data.source    udp_avst_from_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+    asp_avst_if_data.sink       udp_avst_to_kernel_data[JASON_NUM_IOPIPES_DATA-1:0],
+
+    asp_avst_if_ctrl.source    udp_avst_from_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0],
+    asp_avst_if_ctrl.sink       udp_avst_to_kernel_ctrl[JASON_NUM_IOPIPES_CTRL-1:0]
     );
 
     // ====================================================================
@@ -115,13 +128,13 @@ module ofs_plat_afu
         .LOG_CLASS(ofs_plat_log_pkg::LOCAL_MEM)
         )
       // local_mem_to_afu[local_mem_cfg_pkg::LOCAL_MEM_NUM_BANKS]();
-      local_mem_to_afu[2]();
+      local_mem_to_afu[1](); //num bank
 
     // Map each bank individually
     genvar b;
     generate
         // for (b = 0; b < local_mem_cfg_pkg::LOCAL_MEM_NUM_BANKS; b = b + 1)
-        for (b = 0; b < 2; b = b + 1)
+        for (b = 0; b < 1; b = b + 1) //num bank
         begin : mb
             ofs_plat_local_mem_as_axi_mem
               #(
@@ -172,12 +185,22 @@ module ofs_plat_afu
     dma_top  
       #(
       //  .NUM_LOCAL_MEM_BANKS(local_mem_cfg_pkg::LOCAL_MEM_NUM_BANKS)
-       .NUM_LOCAL_MEM_BANKS(2)
+       .NUM_LOCAL_MEM_BANKS(1), //numbank
+       .JASON_NUM_IOPIPES_DATA(JASON_NUM_IOPIPES_DATA),
+       .JASON_NUM_IOPIPES_CTRL(JASON_NUM_IOPIPES_CTRL),
+       .JASON_IOPIPES_WIDTH_DATA(JASON_IOPIPES_WIDTH_DATA),
+       .JASON_IOPIPES_WIDTH_CTRL(JASON_IOPIPES_WIDTH_CTRL)
        )
     dma_top_inst
        (
-        .udp_avst_from_kernel,
-        .udp_avst_to_kernel,
+        // .udp_avst_from_kernel,
+        // .udp_avst_to_kernel,
+
+        .udp_avst_from_kernel_data,
+        .udp_avst_to_kernel_data,
+
+        .udp_avst_from_kernel_ctrl,
+        .udp_avst_to_kernel_ctrl,
         .mmio64_to_afu,
         .host_mem,
         .ddr_mem(local_mem_to_afu)
